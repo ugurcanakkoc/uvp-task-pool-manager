@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -9,16 +9,25 @@ import { navItems } from '@/lib/constants'
 import { useAuthStore } from '@/stores/auth-store'
 import { useI18nStore } from '@/stores/i18n-store'
 import { LogOut, Sparkles } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> { }
 
 export function Sidebar({ className }: SidebarProps) {
     const pathname = usePathname()
+    const router = useRouter()
     const { user, logout } = useAuthStore()
     const { t } = useI18nStore()
+    const supabase = createClient()
     const userRole = user?.role as 'gm' | 'owner' | 'worker'
 
     if (!user) return null
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut()
+        logout()
+        router.replace('/login')
+    }
 
     const filteredItems = navItems.filter((item) => item.roles.includes(userRole))
 
@@ -88,7 +97,7 @@ export function Sidebar({ className }: SidebarProps) {
                 <Button
                     variant="ghost"
                     className="w-full justify-start gap-3 h-11 px-4 text-slate-400 hover:text-red-500 hover:bg-red-50/80 dark:hover:bg-red-900/10 transition-all duration-200 rounded-xl"
-                    onClick={() => logout()}
+                    onClick={handleLogout}
                 >
                     <LogOut className="w-[18px] h-[18px]" />
                     <span className="text-[13px] font-medium">{t('common.logout')}</span>

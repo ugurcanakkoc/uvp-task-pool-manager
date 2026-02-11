@@ -10,7 +10,9 @@ import {
     PlusCircle,
     BarChart3,
     History,
-    Info
+    Info,
+    Layers,
+    HelpCircle
 } from 'lucide-react'
 
 export type NavItem = {
@@ -28,26 +30,18 @@ export const navItems: NavItem[] = [
         icon: LayoutDashboard,
         roles: ['gm', 'owner', 'worker']
     },
-    // GM & Owner: Task Management
+    // GM & Owner & Worker: Task Pool (Görev Havuzu + Açık İlanlar birleştirildi)
     {
         title: 'Görev Havuzu',
-        href: '/tasks',
-        icon: CheckSquare,
+        href: '/pool',
+        icon: Layers,
         roles: ['gm', 'owner', 'worker']
     },
-    // Global: Calendar (Gantt)
     {
         title: 'Takvim (Gantt)',
         href: '/calendar',
         icon: Calendar,
         roles: ['gm', 'owner', 'worker']
-    },
-    // GM & Owner: User Management/Skills
-    {
-        title: 'Ekip & Yetkinlikler',
-        href: '/team',
-        icon: Users,
-        roles: ['gm', 'owner']
     },
     // Global: Gamification (Leaderboard)
     {
@@ -69,6 +63,13 @@ export const navItems: NavItem[] = [
         href: '/audit',
         icon: History,
         roles: ['gm', 'owner']
+    },
+    // Owner: Support Requests
+    {
+        title: 'Destek Talepleri',
+        href: '/support',
+        icon: HelpCircle,
+        roles: ['owner']
     },
     // Global: Settings
     {

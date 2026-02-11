@@ -22,10 +22,24 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import {
+    Avatar,
+    AvatarFallback,
+    AvatarImage,
+} from '@/components/ui/avatar'
+import { Clock, User, UserCircle } from 'lucide-react'
 
 interface Task {
     id: string
     title: string
+    description?: string
     start_date: string
     end_date: string
     status: string
@@ -33,11 +47,20 @@ interface Task {
     department: string
     is_strategic: boolean
     is_production: boolean
+    assigned_worker?: {
+        full_name: string
+        avatar_url?: string
+    }
+    owner?: {
+        full_name: string
+    }
 }
 
 export function GanttChart() {
     const [tasks, setTasks] = useState<Task[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+    const [isDialogOpen, setIsDialogOpen] = useState(false)
     const { t, locale } = useI18nStore()
     const supabase = createClient()
     const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -52,11 +75,15 @@ export function GanttChart() {
         const fetchTasks = async () => {
             const { data, error } = await supabase
                 .from('tasks')
-                .select('*')
+                .select(`
+                    *,
+                    assigned_worker:users!assigned_worker_id(full_name, avatar_url),
+                    owner:users!owner_id(full_name)
+                `)
                 .order('start_date', { ascending: true })
 
             if (!error && data) {
-                setTasks(data)
+                setTasks(data as any)
             }
             setIsLoading(false)
         }
@@ -94,6 +121,11 @@ export function GanttChart() {
         if (task.is_strategic) return 'bg-indigo-500 shadow-indigo-500/30'
         if (task.is_production) return 'bg-amber-500 shadow-amber-500/30'
         return 'bg-blue-500 shadow-blue-500/30'
+    }
+
+    const handleTaskClick = (task: Task) => {
+        setSelectedTask(task)
+        setIsDialogOpen(true)
     }
 
     if (isLoading) {
@@ -247,6 +279,7 @@ export function GanttChart() {
                                                         getStatusColor(task)
                                                     )}
                                                     style={getTaskStyles(task)}
+                                                    onClick={() => handleTaskClick(task)}
                                                 >
                                                     <span className="text-white text-[11px] font-black truncate drop-shadow-sm">
                                                         {task.title}
@@ -258,33 +291,7 @@ export function GanttChart() {
                                                 </div>
                                             </TooltipTrigger>
                                             <TooltipContent className="p-3 bg-white dark:bg-slate-900 border-none shadow-2xl rounded-xl z-[100]" side="top" align="center">
-                                                <div className="space-y-1.5 min-w-[200px]">
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <Badge className={cn("text-[10px] uppercase font-bold", getStatusColor(task))}>
-                                                            {task.status}
-                                                        </Badge>
-                                                        <span className="text-[10px] font-bold text-slate-400">
-                                                            P{task.priority}
-                                                        </span>
-                                                    </div>
-                                                    <h4 className="font-bold text-slate-900 dark:text-white text-sm leading-tight">
-                                                        {task.title}
-                                                    </h4>
-                                                    <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800 mt-2">
-                                                        <div>
-                                                            <p className="text-[9px] uppercase font-bold text-slate-400">Başlangıç</p>
-                                                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                                                {format(new Date(task.start_date), 'd MMM yyyy', { locale: dateLocale })}
-                                                            </p>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[9px] uppercase font-bold text-slate-400">Bitiş</p>
-                                                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                                                                {format(new Date(task.end_date), 'd MMM yyyy', { locale: dateLocale })}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                                <span className="text-xs font-bold">Detaylar için tıklayın</span>
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
@@ -294,6 +301,67 @@ export function GanttChart() {
                     )}
                 </div>
             </div>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            {selectedTask?.title}
+                            {selectedTask && (
+                                <Badge className={cn("text-[10px] uppercase font-bold", getStatusColor(selectedTask))}>
+                                    {selectedTask.status}
+                                </Badge>
+                            )}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {selectedTask?.description || "Açıklama bulunmuyor."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {selectedTask && (
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <span className="text-xs font-bold text-muted-foreground uppercase">Başlangıç</span>
+                                    <div className="flex items-center gap-2 text-sm font-medium">
+                                        <CalendarIcon className="w-4 h-4 text-blue-500" />
+                                        {format(new Date(selectedTask.start_date), 'd MMMM yyyy', { locale: dateLocale })}
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <span className="text-xs font-bold text-muted-foreground uppercase">Bitiş</span>
+                                    <div className="flex items-center gap-2 text-sm font-medium">
+                                        <Clock className="w-4 h-4 text-red-500" />
+                                        {format(new Date(selectedTask.end_date), 'd MMMM yyyy', { locale: dateLocale })}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 pt-4 border-t">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center">
+                                            <User className="w-5 h-5 text-slate-500" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-muted-foreground uppercase">Atanan Kişi</p>
+                                            <p className="text-sm font-medium">{selectedTask.assigned_worker?.full_name || "Atanmadı"}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="div flex items-center gap-3">
+                                    <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center">
+                                        <UserCircle className="w-5 h-5 text-slate-500" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-muted-foreground uppercase">Oluşturan (Owner)</p>
+                                        <p className="text-sm font-medium">{selectedTask.owner?.full_name || "Bilinmiyor"}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

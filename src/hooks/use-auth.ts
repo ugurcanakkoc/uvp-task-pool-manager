@@ -20,11 +20,14 @@ export function useAuth() {
                 .single()
 
             if (!error && data) {
+                console.log('User profile fetched successfully:', data.email)
                 setUser(data as Tables<'users'>)
             } else {
+                console.error('Error fetching user profile:', error)
                 logout()
             }
-        } catch {
+        } catch (err) {
+            console.error('Unexpected error in fetchUserProfile:', err)
             logout()
         }
     }, [supabase, setUser, logout])

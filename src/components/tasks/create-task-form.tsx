@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
@@ -12,7 +13,9 @@ import {
     Plus,
     Zap,
     Hammer,
-    Layout
+    Layout,
+    Sparkles,
+    Search
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,6 +36,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
     Select,
@@ -40,6 +44,8 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
+    SelectGroup,
+    SelectLabel
 } from '@/components/ui/select'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -58,6 +64,7 @@ const taskSchema = z.object({
     title: z.string().min(5, 'Başlık en az 5 karakter olmalıdır'),
     description: z.string().min(20, 'Açıklama en az 20 karakter olmalıdır'),
     department: z.string().min(1, 'Lütfen bir departman seçin'),
+    assigned_worker_id: z.string().optional(),
     task_type: z.string().min(1, 'Lütfen görev tipi seçin'),
     priority: z.string().min(1, 'Lütfen öncelik seçin'),
     start_date: z.date({ required_error: 'Başlangıç tarihi zorunludur' }),
@@ -92,6 +99,7 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
             title: '',
             description: '',
             department: '',
+            assigned_worker_id: '',
             task_type: 'Havuz Görevi',
             priority: '3',
             is_strategic: false,
@@ -109,6 +117,7 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
                 title: data.title,
                 description: data.description,
                 department: data.department,
+                assigned_worker_id: data.assigned_worker_id || null,
                 task_type: data.task_type,
                 priority: parseInt(data.priority),
                 start_date: data.start_date.toISOString(),
@@ -145,6 +154,63 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
         { label: t('departments.sps'), value: 'SPS' },
         { label: t('departments.eConstruction'), value: 'E-Konstrüksiyon' }
     ]
+
+    // Fetch workers with their skills and active task count
+    const [workers, setWorkers] = useState<any[]>([])
+    const [skillFilter, setSkillFilter] = useState<string>('')
+    const [allSkillNames, setAllSkillNames] = useState<string[]>([])
+
+    useEffect(() => {
+        const fetchWorkers = async () => {
+            const { data: workerData, error } = await supabase
+                .from('users')
+                .select(`
+                    id, 
+                    full_name, 
+                    department,
+                    items: skills(skill_name),
+                    active_tasks: tasks(count)
+                `)
+                .eq('role', 'worker')
+                .eq('is_active', true)
+
+            if (!error && workerData) {
+                const formattedWorkers = workerData.map((w: any) => ({
+                    ...w,
+                    skill_names: w.items?.map((s: any) => s.skill_name) || [],
+                    active_task_count: w.active_tasks?.[0]?.count || 0
+                }))
+                setWorkers(formattedWorkers)
+
+                // Collect all unique skill names for filter dropdown
+                const skillSet = new Set<string>()
+                formattedWorkers.forEach((w: any) => {
+                    w.skill_names.forEach((s: string) => skillSet.add(s))
+                })
+                setAllSkillNames([...skillSet].sort())
+            }
+        }
+        fetchWorkers()
+    }, [])
+
+    const titleInput = form.watch('title')
+
+    // Recommendation Logic
+    const recommendedWorkers = useMemo(() => {
+        if (!titleInput || titleInput.length < 3) return []
+        const titleLower = titleInput.toLowerCase()
+        return workers.filter(w =>
+            w.skill_names.some((skill: string) => titleLower.includes(skill.toLowerCase()))
+        )
+    }, [titleInput, workers])
+
+    // Filter workers by selected skill
+    const filteredWorkers = useMemo(() => {
+        if (!skillFilter) return workers
+        return workers.filter(w =>
+            w.skill_names.some((s: string) => s.toLowerCase() === skillFilter.toLowerCase())
+        )
+    }, [skillFilter, workers])
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -232,6 +298,164 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
                                                 <SelectItem value="2" className="text-orange-600 font-bold">{t('tasks.priority2')}</SelectItem>
                                                 <SelectItem value="3" className="text-blue-600 font-medium">{t('tasks.priority3')}</SelectItem>
                                                 <SelectItem value="4" className="text-slate-600">{t('tasks.priority4')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* Conditional fields for high priority (1=Acil, 2=Yüksek) */}
+                            {(form.watch('priority') === '1' || form.watch('priority') === '2') && (
+                                <>
+                                    <FormField
+                                        control={form.control}
+                                        name="order_number"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="font-bold text-orange-600">Sipariş Numarası</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        placeholder="ÖRN: SIP-2026-001"
+                                                        className="rounded-xl h-12 bg-orange-50/50 border-orange-200 focus:bg-white transition-all focus:ring-2 focus:ring-orange-500/20"
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription className="text-[10px] text-orange-500">
+                                                    Yüksek öncelikli görevler için sipariş numarası girilmesi önerilir.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="customer_deadline"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-col">
+                                                <FormLabel className="font-bold text-orange-600 mb-1">Müşteri Termin Tarihi</FormLabel>
+                                                <Popover>
+                                                    <PopoverTrigger asChild>
+                                                        <FormControl>
+                                                            <Button
+                                                                variant={"outline"}
+                                                                className={cn(
+                                                                    "w-full h-12 pl-3 text-left font-normal rounded-xl bg-orange-50/50 border-orange-200",
+                                                                    !field.value && "text-muted-foreground"
+                                                                )}
+                                                            >
+                                                                {field.value ? (
+                                                                    format(field.value, "PPP", { locale: dateLocale })
+                                                                ) : (
+                                                                    <span>Müşteri termin tarihi seçin</span>
+                                                                )}
+                                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                            </Button>
+                                                        </FormControl>
+                                                    </PopoverTrigger>
+                                                    <PopoverContent className="w-auto p-0 rounded-2xl border-none shadow-2xl" align="start">
+                                                        <Calendar
+                                                            mode="single"
+                                                            selected={field.value}
+                                                            onSelect={field.onChange}
+                                                            disabled={(date) => date < new Date()}
+                                                            initialFocus
+                                                            locale={dateLocale}
+                                                        />
+                                                    </PopoverContent>
+                                                </Popover>
+                                                <FormDescription className="text-[10px] text-orange-500">
+                                                    Müşteriye taahhüt edilen teslim tarihi.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </>
+                            )}
+
+                            {/* Skill Filter */}
+                            <div className="col-span-1 md:col-span-2 space-y-2">
+                                <Label className="font-bold text-sm flex items-center gap-2">
+                                    <Search className="w-4 h-4 text-blue-500" />
+                                    Yeteneğe Göre Filtrele
+                                </Label>
+                                <Select value={skillFilter} onValueChange={(v) => setSkillFilter(v === '__all__' ? '' : v)}>
+                                    <SelectTrigger className="rounded-xl h-10 bg-blue-50/50 border-blue-200 text-sm">
+                                        <SelectValue placeholder="Tüm yetenekler (filtre yok)" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-xl border-slate-200 shadow-xl max-h-[250px]">
+                                        <SelectItem value="__all__">Tüm Yetenekler (Filtre Yok)</SelectItem>
+                                        {allSkillNames.map(skill => (
+                                            <SelectItem key={skill} value={skill}>{skill}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <FormField
+                                control={form.control}
+                                name="assigned_worker_id"
+                                render={({ field }) => (
+                                    <FormItem className="col-span-1 md:col-span-2">
+                                        <FormLabel className="font-bold">Atanan Kişi (Opsiyonel)</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value || ""}>
+                                            <FormControl>
+                                                <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-slate-200">
+                                                    <SelectValue placeholder="Çalışan seçin" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent className="rounded-xl border-slate-200 shadow-xl max-h-[300px]">
+                                                {recommendedWorkers.length > 0 && (
+                                                    <SelectGroup>
+                                                        <SelectLabel className="flex items-center gap-2 text-green-600 bg-green-50 px-2 py-1 rounded mb-1">
+                                                            <Sparkles className="w-3 h-3" /> Önerilenler (Skill Eşleşmesi)
+                                                        </SelectLabel>
+                                                        {recommendedWorkers.map((worker) => (
+                                                            <SelectItem key={worker.id} value={worker.id} className="cursor-pointer">
+                                                                <div className="flex flex-col text-left">
+                                                                    <span className="font-medium">{worker.full_name}</span>
+                                                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                                                        {worker.skill_names.slice(0, 3).map((s: string, i: number) => (
+                                                                            <span key={i} className="text-[9px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded border border-green-200">{s}</span>
+                                                                        ))}
+                                                                        {worker.skill_names.length > 3 && <span className="text-[9px] text-slate-400">+{worker.skill_names.length - 3}</span>}
+                                                                    </div>
+                                                                    <span className="text-[10px] text-muted-foreground flex gap-1 mt-0.5">
+                                                                        {worker.department}
+                                                                        {worker.active_task_count > 2 && <span className="text-red-500 font-bold ml-1">(Yoğun!)</span>}
+                                                                    </span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectGroup>
+                                                )}
+                                                <SelectGroup>
+                                                    <SelectLabel>{
+                                                        skillFilter ? `${skillFilter} yeteneğine sahip çalışanlar` : 'Tüm Çalışanlar'
+                                                    }</SelectLabel>
+                                                    {filteredWorkers.filter(w => !recommendedWorkers.find(rw => rw.id === w.id)).map((worker) => (
+                                                        <SelectItem key={worker.id} value={worker.id}>
+                                                            <div className="flex flex-col text-left">
+                                                                <span className="font-medium">{worker.full_name}</span>
+                                                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                                                    {worker.skill_names.slice(0, 3).map((s: string, i: number) => (
+                                                                        <span key={i} className="text-[9px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">{s}</span>
+                                                                    ))}
+                                                                    {worker.skill_names.length > 3 && <span className="text-[9px] text-slate-400">+{worker.skill_names.length - 3}</span>}
+                                                                </div>
+                                                                <span className="text-[10px] text-muted-foreground flex gap-1 mt-0.5">
+                                                                    {worker.department}
+                                                                    {worker.active_task_count > 2 && <span className="text-red-500 font-bold ml-1">(Yoğun!)</span>}
+                                                                </span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                    {filteredWorkers.filter(w => !recommendedWorkers.find(rw => rw.id === w.id)).length === 0 && (
+                                                        <div className="px-3 py-2 text-sm text-slate-400 italic">Bu yeteneğe sahip çalışan yok</div>
+                                                    )}
+                                                </SelectGroup>
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />

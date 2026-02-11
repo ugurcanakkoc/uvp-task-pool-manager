@@ -14,3 +14,4 @@ Her bileşen şu kurallara uymalı:
 7. Empty state: İkon + açıklama + aksiyon butonu
 8. Erişilebilirlik: aria-label, role, keyboard navigation
 9. shadcn/ui bileşenlerini import et, sıfırdan yazma
+10. **ZORUNLU:** UI kodlarında hangi ikonun/butonun hangi kodu temsil ettiğini açıklayan detaylı yorum satırları ekle.

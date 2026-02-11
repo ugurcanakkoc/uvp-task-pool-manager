@@ -4,12 +4,23 @@ import { Sidebar } from "./sidebar"
 import { Header } from "./header"
 import { Toaster } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
+import { useAuthStore } from "@/stores/auth-store"
 import { Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
     const { user } = useAuth()
+    const { isLoading, _hasHydrated } = useAuthStore()
+    const router = useRouter()
 
-    if (!user) {
+    useEffect(() => {
+        if (_hasHydrated && !isLoading && !user) {
+            router.replace('/login')
+        }
+    }, [user, isLoading, _hasHydrated, router])
+
+    if (!user || isLoading || !_hasHydrated) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
                 <div className="flex flex-col items-center gap-4 text-center">

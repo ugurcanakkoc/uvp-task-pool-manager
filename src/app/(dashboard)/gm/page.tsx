@@ -5,7 +5,11 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { TaskPool } from '@/components/tasks/task-pool'
 import { useI18nStore } from '@/stores/i18n-store'
 import { createClient } from '@/lib/supabase/client'
-import { ShieldCheck, TrendingUp, Users, Layers, AlertTriangle } from 'lucide-react'
+import { ShieldCheck, TrendingUp, Users, Layers, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SideTaskList } from '@/components/tasks/side-task-list'
 
 export default function GMPage() {
     const { t } = useI18nStore()
@@ -129,14 +133,61 @@ export default function GMPage() {
                     ))}
                 </div>
 
+                <div className="flex justify-end">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-slate-500 border-slate-200 hover:bg-slate-50"
+                        onClick={async () => {
+                            const res = await fetch('/api/cron/check-stale')
+                            const data = await res.json()
+                            if (data.success) {
+                                toast.success(`Sistem Kontrolü Tamamlandı: ${data.returnedTasksCount} iade, ${data.reviewRemindersCount} hatırlatma.`)
+                            } else {
+                                toast.error('Sistem kontrolü sırasında hata oluştu.')
+                            }
+                        }}
+                    >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Sistem Kontrolünü Çalıştır
+                    </Button>
+                </div>
+
                 {/* 
                     TASK POOL SECTION
                     Tüm görevlerin listelendiği ana tablo bileşeni.
                     TaskPool bileşeni içinde filtreleme, sıralama ve sayfalama mantığı bulunur.
                 */}
-                <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-[32px] border border-slate-100 dark:border-slate-800 p-1">
-                    <TaskPool />
-                </div>
+                {/* 
+                    TASK TABS
+                    GM'in görev havuzu ve tüm yan görevler arasında geçiş yapmasını sağlayan sekmeli yapı.
+                */}
+                <Tabs defaultValue="pool" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                        <TabsTrigger
+                            value="pool"
+                            className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
+                        >
+                            Görev Havuzu
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="side-tasks"
+                            className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
+                        >
+                            Tüm Yan Görevler
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="pool" className="space-y-4">
+                        <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-[32px] border border-slate-100 dark:border-slate-800 p-1">
+                            <TaskPool />
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="side-tasks">
+                        <SideTaskList mode="all" />
+                    </TabsContent>
+                </Tabs>
             </div>
         </DashboardLayout>
     )

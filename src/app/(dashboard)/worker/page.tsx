@@ -7,6 +7,8 @@ import { useI18nStore } from '@/stores/i18n-store'
 import { useAuthStore } from '@/stores/auth-store'
 import { createClient } from '@/lib/supabase/client'
 import { Zap, Trophy, Target } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { SideTaskList } from '@/components/tasks/side-task-list'
 
 export default function WorkerPage() {
     const { t } = useI18nStore()
@@ -117,12 +119,35 @@ export default function WorkerPage() {
                 </div>
 
                 {/* 
-                    TASK POOL
-                    Çalışanın kendisine atanan veya havuzdaki görevleri gördüğü alan.
+                    TASK TABS
+                    Çalışanın görevleri ve yan görevleri arasında geçiş yapmasını sağlayan sekmeli yapı.
                 */}
-                <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-[32px] border border-slate-100 dark:border-slate-800 p-1">
-                    <TaskPool />
-                </div>
+                <Tabs defaultValue="tasks" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-8 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                        <TabsTrigger
+                            value="tasks"
+                            className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
+                        >
+                            Proje Görevleri
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="side-tasks"
+                            className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-700 data-[state=active]:text-slate-900 dark:data-[state=active]:text-white data-[state=active]:shadow-sm transition-all duration-200"
+                        >
+                            Yan Görevler
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="tasks" className="space-y-4">
+                        <div className="bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm rounded-[32px] border border-slate-100 dark:border-slate-800 p-1">
+                            <TaskPool />
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="side-tasks">
+                        <SideTaskList />
+                    </TabsContent>
+                </Tabs>
             </div>
         </DashboardLayout>
     )

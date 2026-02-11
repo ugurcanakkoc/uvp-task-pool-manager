@@ -1,5 +1,7 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/stores/auth-store'
 import { useI18nStore } from '@/stores/i18n-store'
 import type { Locale } from '@/lib/i18n'
@@ -27,6 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Sidebar } from "./sidebar"
+import { NotificationsPopover } from '@/components/layout/notifications-popover'
 
 const LOCALE_LABELS: Record<Locale, string> = {
     tr: '🇹🇷 Türkçe',
@@ -35,10 +38,18 @@ const LOCALE_LABELS: Record<Locale, string> = {
 }
 
 export function Header() {
+    const router = useRouter()
     const { user, logout } = useAuthStore()
     const { t, locale, setLocale } = useI18nStore()
+    const supabase = createClient()
 
     if (!user) return null
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut()
+        logout()
+        router.replace('/login')
+    }
 
     const getRoleBadge = (role: string) => {
         switch (role) {
@@ -106,10 +117,7 @@ export function Header() {
                 </DropdownMenu>
 
                 {/* Notifications */}
-                <Button variant="ghost" size="icon" className="relative rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all group">
-                    <Bell className="h-[18px] w-[18px] text-slate-500 group-hover:text-slate-700 transition-colors" />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full border-2 border-white dark:border-slate-950" />
-                </Button>
+                <NotificationsPopover />
 
                 {/* User Profile */}
                 <DropdownMenu>
@@ -137,10 +145,10 @@ export function Header() {
                             {user.email}
                         </DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="gap-2.5 py-2.5 cursor-pointer rounded-lg mx-1">
+                        <DropdownMenuItem className="gap-2.5 py-2.5 cursor-pointer rounded-lg mx-1" onClick={() => router.push('/profile')}>
                             <User className="h-4 w-4 text-slate-400" /> {t('common.profile')}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2.5 py-2.5 cursor-pointer rounded-lg mx-1">
+                        <DropdownMenuItem className="gap-2.5 py-2.5 cursor-pointer rounded-lg mx-1" onClick={() => router.push('/settings')}>
                             <Settings className="h-4 w-4 text-slate-400" /> {t('common.settings')}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2.5 py-2.5 cursor-pointer rounded-lg mx-1">
@@ -149,7 +157,7 @@ export function Header() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                             className="gap-2.5 py-2.5 cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-50 dark:focus:bg-red-900/20 rounded-lg mx-1"
-                            onClick={() => logout()}
+                            onClick={handleLogout}
                         >
                             <LogOut className="h-4 w-4" /> {t('common.logout')}
                         </DropdownMenuItem>

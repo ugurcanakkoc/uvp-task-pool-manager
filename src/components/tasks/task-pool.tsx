@@ -43,7 +43,18 @@ export function TaskPool() {
         try {
             let query = supabase
                 .from('tasks')
-                .select('*')
+                .select(`
+                    *,
+                    task_volunteers (
+                        id,
+                        user:users (
+                            id,
+                            full_name,
+                            avatar_url,
+                            department
+                        )
+                    )
+                `)
                 .order('priority', { ascending: true })
                 .order('created_at', { ascending: false })
 
@@ -66,26 +77,40 @@ export function TaskPool() {
         fetchTasks()
     }, [selectedDepts])
 
-    const handleClaim = async (taskId: string) => {
+    const handleVolunteer = async (taskId: string) => {
         if (!user) return
 
         try {
-            const { error } = await supabase
-                .from('tasks')
-                .update({
-                    assigned_worker_id: user.id,
-                    status: 'in_progress',
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', taskId)
-                .eq('status', 'open')
+            // Check if already volunteered
+            const task = tasks.find(t => t.id === taskId) as any
+            const isApplied = task?.task_volunteers?.some((v: any) => v.user?.id === user.id)
 
-            if (error) throw error
+            if (isApplied) {
+                // Withdraw
+                const { error } = await supabase
+                    .from('task_volunteers')
+                    .delete()
+                    .eq('task_id', taskId)
+                    .eq('user_id', user.id)
 
-            toast.success(t('tasks.claimSuccess'))
+                if (error) throw error
+                toast.success('Başvurunuz geri çekildi.')
+            } else {
+                // Apply
+                const { error } = await supabase
+                    .from('task_volunteers')
+                    .insert({
+                        task_id: taskId,
+                        user_id: user.id
+                    })
+
+                if (error) throw error
+                toast.success('Göreve talip oldunuz! Yönetici onayı bekleniyor.')
+            }
+
             fetchTasks()
         } catch (error: any) {
-            toast.error(t('tasks.claimError') + ' ' + error.message)
+            toast.error('İşlem sırasında hata oluştu: ' + error.message)
         }
     }
 
@@ -156,13 +181,14 @@ export function TaskPool() {
                 </div>
             ) : filteredTasks.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                    {filteredTasks.map((task) => (
+                    {filteredTasks.map((task: any) => (
                         <TaskCard
                             key={task.id}
                             task={task}
                             userRole={user?.role as any}
                             currentUserId={user?.id}
-                            onClaim={handleClaim}
+                            onVolunteer={handleVolunteer}
+                            onUpdated={() => fetchTasks()} // Callback to refresh
                         />
                     ))}
                 </div>

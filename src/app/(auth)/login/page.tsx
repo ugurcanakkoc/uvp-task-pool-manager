@@ -81,7 +81,17 @@ export default function LoginPage() {
         } catch (error: any) {
             // AbortError'ları yok say
             if (error?.name === 'AbortError') return
-            toast.error(error.message || 'Giriş yapılamadı. Bilgilerinizi kontrol edin.')
+
+            let message = 'Giriş yapılamadı.'
+            if (error.status === 400) {
+                message = 'Hatalı e-posta veya şifre. Lütfen bilgilerinizi kontrol edin.'
+            } else if (error.status === 500) {
+                message = 'Sunucu hatası (RLS/Database). Lütfen BT Departmanı ile iletişime geçin.'
+            } else {
+                message = error.message || message
+            }
+
+            toast.error(message)
         } finally {
             setIsLoading(false)
         }

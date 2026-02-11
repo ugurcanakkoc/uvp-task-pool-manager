@@ -8,6 +8,7 @@
 - shadcn/ui bileşenlerini kullan, kendi UI bileşeni yazma (gerek olmadıkça).
 - Türkçe yorum satırları yaz.
 - Console.log'ları production kodda bırakma.
+- **ZORUNLU:** UI kodlarında hangi ikonun/butonun hangi kodu temsil ettiğini açıklayan detaylı yorum satırları ekle. Değişiklik yapılması gerektiğinde kolaylık sağlamalıdır.
 
 ## Dosya Yapısı
 - Sayfa dosyaları: `src/app/(dashboard)/[route]/page.tsx`
