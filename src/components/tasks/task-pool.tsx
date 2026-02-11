@@ -9,8 +9,10 @@ import {
     Filter,
     ArrowUpDown,
     Loader2,
-    Inbox
+    Inbox,
+    Sparkles
 } from 'lucide-react'
+import { EditTaskDialog } from './edit-task-dialog'
 import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,
@@ -27,11 +29,16 @@ import type { Tables } from '@/types/supabase'
 
 type Task = Tables<'tasks'>
 
-export function TaskPool() {
+interface TaskPoolProps {
+    mode?: 'general' | 'owner' | 'gm' | 'pending_approval'
+}
+
+export function TaskPool({ mode = 'general' }: TaskPoolProps) {
     const [tasks, setTasks] = useState<Task[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [search, setSearch] = useState('')
     const [selectedDepts, setSelectedDepts] = useState<string[]>([])
+    const [editingTask, setEditingTask] = useState<Task | null>(null)
     const { user } = useAuthStore()
     const { t } = useI18nStore()
     const supabase = createClient()
@@ -62,6 +69,18 @@ export function TaskPool() {
                 query = query.in('department', selectedDepts)
             }
 
+            // Filtering based on mode
+            if (mode === 'general') {
+                // Public pool: assigned_worker_id is null AND status is 'pending'
+                query = query.is('assigned_worker_id', null).eq('status', 'pending')
+            } else if (mode === 'owner' && user) {
+                query = query.eq('owner_id', user.id)
+            } else if (mode === 'pending_approval') {
+                // Tasks created by Owners that need GM approval OR tasks with candidates
+                query = query.eq('status', 'requested')
+            }
+            // GM mode shows everything by default if not filtered
+
             const { data, error } = await query
 
             if (error) throw error
@@ -74,8 +93,10 @@ export function TaskPool() {
     }
 
     useEffect(() => {
-        fetchTasks()
-    }, [selectedDepts])
+        if (user) {
+            fetchTasks()
+        }
+    }, [selectedDepts, user, mode])
 
     const handleVolunteer = async (taskId: string) => {
         if (!user) return
@@ -120,14 +141,14 @@ export function TaskPool() {
     )
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 px-1 py-1">
             {/* Search & Filter Bar */}
             <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
-                <div className="relative w-full md:max-w-md group">
+                <div className="relative w-full md:max-w-md group bg-white/50 dark:bg-slate-900/50 rounded-xl">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     <Input
                         placeholder={t('common.searchTasks')}
-                        className="pl-10 h-11 border-slate-200/60 rounded-xl bg-white/80 backdrop-blur-sm focus:bg-white focus:border-blue-200 focus:ring-2 focus:ring-blue-500/10 dark:bg-slate-900/50 transition-all"
+                        className="pl-10 h-11 border-slate-200/60 rounded-xl bg-white/80 backdrop-blur-sm focus:bg-white focus:border-blue-200 focus:ring-2 focus:ring-blue-500/10 dark:bg-slate-900/50 transition-all shadow-sm"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -136,7 +157,7 @@ export function TaskPool() {
                 <div className="flex items-center gap-2 w-full md:w-auto">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-11 rounded-xl gap-2 border-slate-200/60 px-4 bg-white/80 backdrop-blur-sm hover:bg-white dark:bg-slate-900/50">
+                            <Button variant="outline" className="h-11 rounded-xl gap-2 border-slate-200/60 px-4 bg-white/80 backdrop-blur-sm hover:bg-white dark:bg-slate-900/50 shadow-sm transition-all hover:border-blue-200">
                                 <Filter className="h-4 w-4" />
                                 {t('common.departments')}
                                 {selectedDepts.length > 0 && (
@@ -146,12 +167,13 @@ export function TaskPool() {
                                 )}
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 rounded-xl backdrop-blur-xl shadow-xl">
-                            <DropdownMenuLabel>{t('common.departmentFilter')}</DropdownMenuLabel>
+                        <DropdownMenuContent align="end" className="w-56 rounded-xl backdrop-blur-xl shadow-xl border-slate-100 p-1">
+                            <DropdownMenuLabel className="text-xs font-bold uppercase tracking-wider text-slate-500 px-2 py-1.5">{t('common.departmentFilter')}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             {departments.map((dept) => (
                                 <DropdownMenuCheckboxItem
                                     key={dept}
+                                    className="rounded-lg h-9"
                                     checked={selectedDepts.includes(dept)}
                                     onCheckedChange={(checked) => {
                                         setSelectedDepts(prev =>
@@ -165,7 +187,7 @@ export function TaskPool() {
                         </DropdownMenuContent>
                     </DropdownMenu>
 
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all">
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all shadow-sm border border-slate-200/60">
                         <ArrowUpDown className="h-4 w-4" />
                     </Button>
                 </div>
@@ -188,30 +210,50 @@ export function TaskPool() {
                             userRole={user?.role as any}
                             currentUserId={user?.id}
                             onVolunteer={handleVolunteer}
+                            onEdit={(task) => setEditingTask(task)}
                             onUpdated={() => fetchTasks()} // Callback to refresh
                         />
                     ))}
                 </div>
             ) : (
-                <div className="h-80 flex flex-col items-center justify-center gap-5 border border-dashed border-slate-200/60 rounded-2xl bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900/50 dark:to-slate-950/50">
+                <div className="h-80 flex flex-col items-center justify-center gap-5 border border-dashed border-slate-200/60 rounded-[32px] bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900/50 dark:to-slate-950/50 p-8">
                     <div className="relative">
                         <div className="absolute inset-0 bg-slate-200/50 rounded-2xl blur-xl" />
                         <div className="relative w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl shadow-sm flex items-center justify-center border border-slate-100 dark:border-slate-700">
                             <Inbox className="h-7 w-7 text-slate-400" />
                         </div>
                     </div>
-                    <div className="text-center">
+                    <div className="text-center max-w-sm">
                         <h3 className="font-bold text-slate-900 dark:text-white mb-1">{t('tasks.notFound')}</h3>
-                        <p className="text-sm text-slate-500">{t('tasks.notFoundDesc')}</p>
+                        <p className="text-sm text-slate-500 leading-relaxed">{t('tasks.notFoundDesc')}</p>
                     </div>
-                    <Button
-                        variant="outline"
-                        className="rounded-xl border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all"
-                        onClick={() => { setSearch(''); setSelectedDepts([]) }}
-                    >
-                        {t('common.clearFilters')}
-                    </Button>
+                    {(search || selectedDepts.length > 0) ? (
+                        <Button
+                            variant="outline"
+                            className="rounded-xl border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all font-bold px-6"
+                            onClick={() => { setSearch(''); setSelectedDepts([]) }}
+                        >
+                            {t('common.clearFilters')}
+                        </Button>
+                    ) : (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold border border-blue-100 dark:border-blue-900/30">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            Harika! Şu an için bekleyen görev yok.
+                        </div>
+                    )}
                 </div>
+            )}
+
+            {editingTask && (
+                <EditTaskDialog
+                    task={editingTask}
+                    open={!!editingTask}
+                    onOpenChange={(open) => !open && setEditingTask(null)}
+                    onSuccess={() => {
+                        fetchTasks()
+                        setEditingTask(null)
+                    }}
+                />
             )}
         </div>
     )

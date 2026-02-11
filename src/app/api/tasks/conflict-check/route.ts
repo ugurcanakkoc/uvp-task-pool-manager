@@ -18,6 +18,31 @@ function getSupabase() {
 export async function POST(req: NextRequest) {
     try {
         const supabase = getSupabase()
+
+        // 1. Auth check
+        const authHeader = req.headers.get('authorization')
+        if (!authHeader) {
+            return NextResponse.json({ error: 'Yetkisiz erişim.' }, { status: 401 })
+        }
+
+        const token = authHeader.replace('Bearer ', '')
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+
+        if (authError || !authUser) {
+            return NextResponse.json({ error: 'Geçersiz oturum.' }, { status: 401 })
+        }
+
+        // 2. Role check (Must be GM or Owner)
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', authUser.id)
+            .single()
+
+        if (!userData || !['gm', 'owner'].includes(userData.role)) {
+            return NextResponse.json({ error: 'Bu işlem için yetkiniz yok.' }, { status: 403 })
+        }
+
         const body = await req.json()
         const { worker_id, start_date, end_date, task_id, is_production } = body
 

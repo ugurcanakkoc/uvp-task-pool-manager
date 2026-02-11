@@ -20,6 +20,31 @@ function getSupabase() {
 export async function GET(req: NextRequest) {
     try {
         const supabase = getSupabase()
+
+        // 1. Auth check
+        const authHeader = req.headers.get('authorization')
+        if (!authHeader) {
+            return NextResponse.json({ error: 'Yetkisiz erişim.' }, { status: 401 })
+        }
+
+        const token = authHeader.replace('Bearer ', '')
+        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+
+        if (authError || !authUser) {
+            return NextResponse.json({ error: 'Geçersiz oturum.' }, { status: 401 })
+        }
+
+        // 2. Role check (Must be GM)
+        const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', authUser.id)
+            .single()
+
+        if (!userData || userData.role !== 'gm') {
+            return NextResponse.json({ error: 'Bu rapor sadece GM tarafından görüntülenebilir.' }, { status: 403 })
+        }
+
         const now = new Date()
 
         // 1. Overdue tasks (end_date passed, not completed)

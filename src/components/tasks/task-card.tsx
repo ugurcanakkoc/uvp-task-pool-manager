@@ -80,23 +80,22 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
 
     const hasApplied = volunteers.some(v => v.user?.id === currentUserId)
 
-    // Can volunteer if: Worker + Open + Not Assigned + Not Applied
-    const canVolunteer = isWorker && !task.assigned_worker_id && task.status === 'open' && !hasApplied
-    // Can Withdraw if: Worker + Open + Not Assigned + Applied
-    const canWithdraw = isWorker && !task.assigned_worker_id && task.status === 'open' && hasApplied
+    const statusMap = {
+        'requested': { label: t('tasks.statusRequested'), color: 'bg-indigo-500/10 text-indigo-600 border-indigo-200/50' },
+        'pending': { label: t('tasks.statusOpen'), color: 'bg-blue-500/10 text-blue-600 border-blue-200/50' },
+        'active': { label: t('tasks.statusActive'), color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200/50' },
+        'in_progress': { label: t('tasks.statusInProgress'), color: 'bg-amber-500/10 text-amber-600 border-amber-200/50' },
+        'completed': { label: t('tasks.statusCompleted'), color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200/50' },
+        'returned': { label: t('tasks.statusReturned'), color: 'bg-red-500/10 text-red-600 border-red-200/50' },
+        'cancelled': { label: t('tasks.statusCancelled'), color: 'bg-slate-500/10 text-slate-600 border-slate-200/50' },
+        'review': { label: t('tasks.statusReview'), color: 'bg-violet-500/10 text-violet-600 border-violet-200/50' }
+    }
 
     const priorityConfig = {
         1: { color: 'from-red-500 to-rose-600', bg: 'bg-red-50', text: 'text-red-600', label: t('tasks.priority1').split(' - ')[1] || 'ACİL' },
         2: { color: 'from-orange-500 to-amber-600', bg: 'bg-orange-50', text: 'text-orange-600', label: t('tasks.priority2').split(' - ')[1] || 'YÜKSEK' },
         3: { color: 'from-blue-500 to-indigo-600', bg: 'bg-blue-50', text: 'text-blue-600', label: t('tasks.priority3').split(' - ')[1] || 'ORTA' },
         4: { color: 'from-slate-400 to-slate-500', bg: 'bg-slate-50', text: 'text-slate-500', label: t('tasks.priority4').split(' - ')[1] || 'DÜŞÜK' },
-    }
-
-    const statusMap = {
-        'open': { label: t('tasks.statusOpen'), color: 'bg-blue-500/10 text-blue-600 border-blue-200/50' },
-        'in_progress': { label: t('tasks.statusInProgress'), color: 'bg-amber-500/10 text-amber-600 border-amber-200/50' },
-        'completed': { label: t('tasks.statusCompleted'), color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200/50' },
-        'returned': { label: t('tasks.statusReturned'), color: 'bg-red-500/10 text-red-600 border-red-200/50' }
     }
 
     const priority = priorityConfig[task.priority as keyof typeof priorityConfig] || priorityConfig[3]
@@ -107,10 +106,14 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
     const [showCandidatesDialog, setShowCandidatesDialog] = useState(false)
 
     // Worker Actions: Assigned worker can add progress or submit
-    const canAction = isWorker && task.assigned_worker_id === currentUserId && (task.status === 'in_progress' || task.status === 'active' || task.status === 'open')
+    const canAction = isWorker && task.assigned_worker_id === currentUserId && (task.status === 'in_progress' || task.status === 'active' || task.status === 'pending')
 
     // Owner Actions: Owner or GM can review submitted tasks
     const canReview = (isOwner || userRole === 'gm') && task.status === 'review'
+
+    // Volunteer logic: Only for 'pending' tasks
+    const canVolunteer = isWorker && !task.assigned_worker_id && task.status === 'pending' && !hasApplied
+    const canWithdraw = isWorker && !task.assigned_worker_id && task.status === 'pending' && hasApplied
 
     const handleApproveVolunteer = async (userId: string) => {
         try {
@@ -129,13 +132,13 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
             // 2. Clear volunteers (optional, or just keep them for record/transparency)
             // They will automatically not show as candidates anymore because task is assigned.
 
-            toast.success('Aday onaylandı ve görev atandı.')
+            toast.success(t('tasks.volunteerApproved'))
             setShowCandidatesDialog(false)
             onUpdated?.()
 
         } catch (error) {
             console.error('Error approving volunteer:', error)
-            toast.error('Atama işlemi sırasında hata oluştu.')
+            toast.error(t('tasks.assignError'))
         }
     }
 
@@ -148,11 +151,46 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
 
             if (error) throw error
 
-            toast.success('Aday başvurusu reddedildi.')
+            toast.success(t('tasks.volunteerRejected'))
             onUpdated?.()
         } catch (error) {
             console.error('Error rejecting volunteer:', error)
-            toast.error('İşlem başarısız.')
+            toast.error(t('tasks.opError'))
+        }
+    }
+
+    const handleApproveRequest = async () => {
+        try {
+            const { error } = await supabase
+                .from('tasks')
+                .update({
+                    status: 'pending', // GM approved, now pending for workers
+                    approved_at: new Date().toISOString()
+                })
+                .eq('id', task.id)
+
+            if (error) throw error
+            toast.success(t('tasks.requestApproved'))
+            onUpdated?.()
+        } catch (error: any) {
+            toast.error(t('tasks.approveError') + ' ' + error.message)
+        }
+    }
+
+    const handleRejectRequest = async () => {
+        try {
+            const { error } = await supabase
+                .from('tasks')
+                .update({
+                    status: 'returned' // Returned to owner
+                })
+                .eq('id', task.id)
+
+            if (error) throw error
+            toast.success(t('tasks.requestRejected'))
+            onUpdated?.()
+        } catch (error: any) {
+            toast.error(t('tasks.rejectError') + ' ' + error.message)
         }
     }
 
@@ -232,14 +270,30 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                 </CardContent>
 
                 <CardFooter className="px-5 pb-5 pt-0 gap-2">
-                    {/* CASE 1: MANAGE VOLUNTEERS (Owner/GM) */}
-                    {canManageVolunteers ? (
+                    {/* CASE 0: GM APPROVAL (Requested tasks) */}
+                    {userRole === 'gm' && task.status === 'requested' ? (
+                        <div className="flex gap-2 w-full">
+                            <Button
+                                variant="outline"
+                                className="flex-1 rounded-xl border-red-200/60 text-red-600 hover:bg-red-50 font-bold h-10 gap-2"
+                                onClick={handleRejectRequest}
+                            >
+                                <XCircle className="h-4 w-4" /> {t('tasks.reject')}
+                            </Button>
+                            <Button
+                                className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 shadow-lg shadow-emerald-500/20 gap-2"
+                                onClick={handleApproveRequest}
+                            >
+                                <CheckCircle2 className="h-4 w-4" /> {t('tasks.approve')}
+                            </Button>
+                        </div>
+                    ) : canManageVolunteers ? (
                         <Button
                             className="w-full rounded-xl bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold h-10 border border-orange-200 gap-2"
                             onClick={() => setShowCandidatesDialog(true)}
                         >
                             <Users className="h-4 w-4" />
-                            {volunteers.length} Adayı İncele
+                            {volunteers.length} {t('tasks.viewCandidates')}
                         </Button>
                     ) : canVolunteer ? (
                         /* CASE 2: VOLUNTEER (Apply) */
@@ -247,7 +301,7 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                             className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold h-10 shadow-lg shadow-blue-500/20 gap-2 transition-all duration-200"
                             onClick={() => onVolunteer?.(task.id)}
                         >
-                            <CheckCircle2 className="h-4 w-4" /> Göreve Talip Ol
+                            <CheckCircle2 className="h-4 w-4" /> {t('tasks.volunteer')}
                         </Button>
                     ) : canWithdraw ? (
                         /* CASE 2.5: WITHDRAW APPLICATION */
@@ -255,7 +309,7 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                             className="w-full rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold h-10 border border-slate-200 gap-2"
                             onClick={() => onVolunteer?.(task.id)}
                         >
-                            <XCircle className="h-4 w-4" /> Başvuruyu Çek
+                            <XCircle className="h-4 w-4" /> {t('tasks.withdraw')}
                         </Button>
                     ) : canReview ? (
                         /* CASE 3: OWNER REVIEW ACTION */
@@ -263,7 +317,7 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                             className="w-full rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold h-10 shadow-lg shadow-violet-500/20 gap-2"
                             onClick={() => setShowReviewDialog(true)}
                         >
-                            <Eye className="h-4 w-4" /> İncele ve Onayla
+                            <Eye className="h-4 w-4" /> {t('tasks.reviewAndApprove')}
                         </Button>
                     ) : canAction ? (
                         /* CASE 4: WORKER ACTIONS */
@@ -273,13 +327,13 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                                 className="flex-1 rounded-xl border-blue-200/60 text-blue-600 hover:bg-blue-50 font-medium h-10 gap-2"
                                 onClick={() => setShowProgressDialog(true)}
                             >
-                                <Clock className="h-4 w-4" /> İlerleme
+                                <Clock className="h-4 w-4" /> {t('tasks.progress')}
                             </Button>
                             <Button
                                 className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 shadow-lg shadow-emerald-500/20 gap-2"
                                 onClick={() => setShowSubmitDialog(true)}
                             >
-                                <CheckCircle2 className="h-4 w-4" /> Tamamla
+                                <CheckCircle2 className="h-4 w-4" /> {t('tasks.complete')}
                             </Button>
                         </div>
                     ) : (
@@ -289,7 +343,7 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                             className="w-full rounded-xl border-slate-200/60 text-slate-500 font-medium h-10 gap-2"
                             disabled
                         >
-                            {task.assigned_worker_id ? (task.status === 'review' ? 'İncelemede' : t('tasks.assigned')) : (hasApplied ? 'Başvuruldu' : t('tasks.pending'))}
+                            {task.assigned_worker_id ? (task.status === 'review' ? t('tasks.statusReview') : t('tasks.assigned')) : (hasApplied ? t('tasks.pending') : t('tasks.pending'))}
                         </Button>
                     )}
                 </CardFooter>
@@ -318,9 +372,9 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
             <Dialog open={showCandidatesDialog} onOpenChange={setShowCandidatesDialog}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Adaylar</DialogTitle>
+                        <DialogTitle>{t('tasks.candidatesTitle')}</DialogTitle>
                         <DialogDescription>
-                            Bu görev için başvuran adayları inceleyin ve onaylayın.
+                            {t('tasks.candidatesDesc')}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
@@ -332,8 +386,8 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                                         <AvatarFallback>{volunteer.user?.full_name?.substring(0, 2).toUpperCase() || '??'}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <p className="text-sm font-bold">{volunteer.user?.full_name || "Gizli Kullanıcı"}</p>
-                                        <p className="text-xs text-slate-500">{volunteer.user?.department || "Departman Belirtilmemiş"}</p>
+                                        <p className="text-sm font-bold">{volunteer.user?.full_name || t('tasks.unknownUser')}</p>
+                                        <p className="text-xs text-slate-500">{volunteer.user?.department || t('profile.notFound')}</p>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
@@ -344,7 +398,7 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                                         onClick={() => handleRejectVolunteer(volunteer.id)}
                                     >
                                         <XCircle className="w-4 h-4 mr-2" />
-                                        Reddet
+                                        {t('tasks.reject')}
                                     </Button>
                                     <Button
                                         size="sm"
@@ -353,13 +407,13 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                                         disabled={!volunteer.user?.id}
                                     >
                                         <UserCheck className="w-4 h-4 mr-2" />
-                                        Onayla
+                                        {t('tasks.approve')}
                                     </Button>
                                 </div>
                             </div>
                         ))}
                         {volunteers.length === 0 && (
-                            <p className="text-center text-slate-500">Henüz aday yok.</p>
+                            <p className="text-center text-slate-500">{t('tasks.noCandidates')}</p>
                         )}
                     </div>
                 </DialogContent>

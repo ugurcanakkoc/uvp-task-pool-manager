@@ -12,7 +12,9 @@ import {
     History,
     Info,
     Layers,
-    HelpCircle
+    HelpCircle,
+    Code2,
+    BadgeCheck
 } from 'lucide-react'
 
 export type NavItem = {
@@ -77,5 +79,19 @@ export const navItems: NavItem[] = [
         href: '/settings',
         icon: Settings,
         roles: ['gm', 'owner', 'worker']
+    },
+    // GM: Approvals
+    {
+        title: 'Onay Bekleyenler',
+        href: '/approvals',
+        icon: BadgeCheck,
+        roles: ['gm']
+    },
+    // GM & Owner: API Documentation
+    {
+        title: 'API Dökümanı',
+        href: '/api-docs',
+        icon: Code2,
+        roles: ['gm', 'owner']
     }
 ]

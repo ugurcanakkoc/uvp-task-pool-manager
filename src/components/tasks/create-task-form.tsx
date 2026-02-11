@@ -127,7 +127,9 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
                 order_number: data.order_number || null,
                 customer_deadline: data.customer_deadline?.toISOString() || null,
                 owner_id: user.id,
-                status: 'open'
+                status: user.role === 'gm'
+                    ? (data.assigned_worker_id ? 'active' : 'pending')
+                    : 'requested'
             })
 
             if (error) throw error
