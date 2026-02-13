@@ -12,7 +12,7 @@ import {
     Inbox,
     Sparkles
 } from 'lucide-react'
-import { EditTaskDialog } from './edit-task-dialog'
+import { TaskDetailDialog } from '@/components/calendar/task-detail-dialog'
 import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,
@@ -30,7 +30,7 @@ import type { Tables } from '@/types/supabase'
 type Task = Tables<'tasks'>
 
 interface TaskPoolProps {
-    mode?: 'general' | 'owner' | 'gm' | 'pending_approval'
+    mode?: 'general' | 'owner' | 'gm' | 'pending_approval' | 'worker'
 }
 
 export function TaskPool({ mode = 'general' }: TaskPoolProps) {
@@ -52,6 +52,12 @@ export function TaskPool({ mode = 'general' }: TaskPoolProps) {
                 .from('tasks')
                 .select(`
                     *,
+                    assigned_worker:users!assigned_worker_id(*),
+                    bookings(
+                        id,
+                        worker_id,
+                        worker:users!worker_id(full_name, avatar_url)
+                    ),
                     task_volunteers (
                         id,
                         user:users (
@@ -78,6 +84,23 @@ export function TaskPool({ mode = 'general' }: TaskPoolProps) {
             } else if (mode === 'pending_approval') {
                 // Tasks created by Owners that need GM approval OR tasks with candidates
                 query = query.eq('status', 'requested')
+            } else if (mode === 'worker' && user) {
+                // Also fetch tasks assigned through bookings
+                const { data: userBookings } = await supabase
+                    .from('bookings')
+                    .select('task_id')
+                    .eq('worker_id', user.id)
+                    .eq('is_active', true)
+
+                const bookingTaskIds = userBookings?.map((b: { task_id: string }) => b.task_id) || []
+
+                if (bookingTaskIds.length > 0) {
+                    query = query.or(`assigned_worker_id.eq.${user.id},id.in.(${bookingTaskIds.join(',')})`)
+                } else {
+                    query = query.eq('assigned_worker_id', user.id)
+                }
+
+                query = query.neq('status', 'completed').neq('status', 'cancelled')
             }
             // GM mode shows everything by default if not filtered
 
@@ -126,7 +149,7 @@ export function TaskPool({ mode = 'general' }: TaskPoolProps) {
                     })
 
                 if (error) throw error
-                toast.success('Göreve talip oldunuz! Yönetici onayı bekleniyor.')
+                toast.success('Destek talebine talip oldunuz! Yönetici onayı bekleniyor.')
             }
 
             fetchTasks()
@@ -204,15 +227,16 @@ export function TaskPool({ mode = 'general' }: TaskPoolProps) {
             ) : filteredTasks.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                     {filteredTasks.map((task: any) => (
-                        <TaskCard
-                            key={task.id}
-                            task={task}
-                            userRole={user?.role as any}
-                            currentUserId={user?.id}
-                            onVolunteer={handleVolunteer}
-                            onEdit={(task) => setEditingTask(task)}
-                            onUpdated={() => fetchTasks()} // Callback to refresh
-                        />
+                        <div key={task.id} onClick={() => setEditingTask(task)} className="cursor-pointer">
+                            <TaskCard
+                                task={task}
+                                userRole={user?.role as any}
+                                currentUserId={user?.id}
+                                onVolunteer={handleVolunteer}
+                                onEdit={(task) => setEditingTask(task)}
+                                onUpdated={() => fetchTasks()}
+                            />
+                        </div>
                     ))}
                 </div>
             ) : (
@@ -238,15 +262,15 @@ export function TaskPool({ mode = 'general' }: TaskPoolProps) {
                     ) : (
                         <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold border border-blue-100 dark:border-blue-900/30">
                             <Sparkles className="w-3.5 h-3.5" />
-                            Harika! Şu an için bekleyen görev yok.
+                            Harika! Şu an için bekleyen destek talebi yok.
                         </div>
                     )}
                 </div>
             )}
 
             {editingTask && (
-                <EditTaskDialog
-                    task={editingTask}
+                <TaskDetailDialog
+                    task={editingTask as any}
                     open={!!editingTask}
                     onOpenChange={(open) => !open && setEditingTask(null)}
                     onSuccess={() => {

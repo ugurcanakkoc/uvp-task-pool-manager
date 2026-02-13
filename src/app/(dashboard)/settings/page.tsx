@@ -19,7 +19,7 @@ export default function SettingsPage() {
                             <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center mx-auto md:mx-0 mb-3">
                                 <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                             </div>
-                            <CardTitle className="text-sm font-bold">Profil Ayarları</Highlight>
+                            <CardTitle className="text-sm font-bold">Profil Ayarları</CardTitle>
                             <CardDescription className="text-xs">Kişisel bilgilerinizi ve avatarınızı güncelleyin.</CardDescription>
                         </CardHeader>
                     </Card>

@@ -29,7 +29,7 @@ export default function ApprovalsPage() {
                             Onay Bekleyenler
                         </h1>
                         <p className="text-violet-200/80 max-w-2xl text-sm md:text-base leading-relaxed font-medium">
-                            Proje sahipleri tarafından oluşturulan görev isteklerini ve çalışan başvurularını buradan yönetebilirsiniz.
+                            Proje sahipleri tarafından oluşturulan destek talebi isteklerini ve çalışan başvurularını buradan yönetebilirsiniz.
                         </p>
                     </div>
                 </div>
@@ -42,7 +42,7 @@ export default function ApprovalsPage() {
                                 <BadgeCheck className="w-5 h-5" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-bold text-slate-900 dark:text-white">İncelenmesi Gereken Görevler</h2>
+                                <h2 className="text-lg font-bold text-slate-900 dark:text-white">İncelenmesi Gereken Destek Talepleri</h2>
                                 <p className="text-sm text-slate-500">Onay bekleyen görev istekleri ve çalışan başvuruları listeleniyor.</p>
                             </div>
                         </div>

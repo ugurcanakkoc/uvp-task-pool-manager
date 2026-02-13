@@ -44,7 +44,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Search, Filter, Users, LayoutGrid, Calendar as CalendarDays } from 'lucide-react'
+import { Search, Filter, Users, LayoutGrid, Calendar as CalendarDays, Plus } from 'lucide-react'
+import { CreateTaskForm } from '@/components/tasks/create-task-form'
 
 export default function PoolPage() {
     const { user } = useAuthStore()
@@ -163,17 +164,20 @@ export default function PoolPage() {
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
                     <div className="flex flex-col gap-2">
-                        <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Görev Havuzu</h1>
+                        <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Destek Talebi Havuzu</h1>
                         <p className="text-muted-foreground">
-                            Atanmamış görevleri inceleyin veya çalışan takvimini kontrol edin.
+                            Atanmamış destek taleplerini inceleyin veya çalışan takvimini kontrol edin.
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {(user?.role === 'gm' || user?.role === 'owner') && (
+                            <CreateTaskForm onSuccess={fetchPoolTasks} />
+                        )}
                         <div className="relative w-full md:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <Input
-                                placeholder="Görev ara..."
+                                placeholder="Destek talebi ara..."
                                 className="pl-9 rounded-xl border-slate-200 bg-white/50 backdrop-blur-sm"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}

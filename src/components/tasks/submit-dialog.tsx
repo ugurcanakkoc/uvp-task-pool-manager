@@ -83,13 +83,13 @@ export function SubmitDialog({ taskId, trigger, open: controlledOpen, onOpenChan
 
             if (taskError) throw taskError
 
-            toast.success('Görev başarıyla onaya gönderildi.')
+            toast.success('Destek talebi başarıyla onaya gönderildi.')
             form.reset()
             onOpenChange(false)
             onSuccess?.()
         } catch (error) {
             console.error('Submit error:', error)
-            toast.error('Görev gönderilirken bir hata oluştu.')
+            toast.error('Destek talebi gönderilirken bir hata oluştu.')
         } finally {
             setIsSubmitting(false)
         }
@@ -100,9 +100,9 @@ export function SubmitDialog({ taskId, trigger, open: controlledOpen, onOpenChan
             {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Görevi Tamamla ve Gönder</DialogTitle>
+                    <DialogTitle>Destek Talebini Tamamla ve Gönder</DialogTitle>
                     <DialogDescription>
-                        Görevi tamamladığınızdan eminseniz, proje sahibine bir not bırakarak onaya gönderin.
+                        Destek talebini tamamladığınızdan eminseniz, proje sahibine bir not bırakarak onaya gönderin.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -116,7 +116,7 @@ export function SubmitDialog({ taskId, trigger, open: controlledOpen, onOpenChan
                                     <FormLabel>Teslim Notu</FormLabel>
                                     <FormControl>
                                         <Textarea
-                                            placeholder="Görevi tamamladım, şu dosyalar eklendi..."
+                                            placeholder="Destek talebini tamamladım, şu dosyalar eklendi..."
                                             className="min-h-[100px] resize-none"
                                             {...field}
                                         />

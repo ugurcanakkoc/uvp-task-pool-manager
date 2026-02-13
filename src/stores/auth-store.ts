@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Tables } from '@/types/supabase'
+import posthog from 'posthog-js'
 
 type UserProfile = Tables<'users'>
 
@@ -20,9 +21,21 @@ export const useAuthStore = create<AuthState>()(
             user: null,
             isLoading: true,
             _hasHydrated: false,
-            setUser: (user) => set({ user, isLoading: false }),
+            setUser: (user) => {
+                set({ user, isLoading: false })
+                if (user) {
+                    posthog.identify(user.id, {
+                        email: user.email,
+                        full_name: user.full_name,
+                        role: user.role
+                    })
+                }
+            },
             setLoading: (isLoading) => set({ isLoading }),
-            logout: () => set({ user: null, isLoading: false }),
+            logout: () => {
+                set({ user: null, isLoading: false })
+                posthog.reset()
+            },
             setHasHydrated: (_hasHydrated) => set({ _hasHydrated }),
         }),
         {

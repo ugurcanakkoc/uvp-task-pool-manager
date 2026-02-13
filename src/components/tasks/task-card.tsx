@@ -18,6 +18,7 @@ import {
     UserCheck,
     XCircle
 } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -46,6 +47,12 @@ import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 type Task = Tables<'tasks'> & {
+    assigned_worker?: {
+        id: string
+        full_name: string
+        avatar_url?: string
+        department?: string
+    } | null
     task_volunteers?: {
         id: string
         user: {
@@ -196,9 +203,9 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
 
     return (
         <>
-            <Card className="group relative overflow-hidden border-slate-200/60 dark:border-slate-800/60 hover:border-blue-300/60 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-300 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm hover:-translate-y-0.5">
+            <Card className="group relative overflow-hidden border border-white dark:border-slate-800 hover:shadow-[0px_20px_50px_rgba(0,0,0,0.1)] transition-all duration-500 rounded-[24px] bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl hover:-translate-y-1.5 shadow-sm">
                 {/* Priority Gradient Top Bar */}
-                <div className={cn("absolute top-0 left-0 right-0 h-1 bg-gradient-to-r", priority.color)} />
+                <div className={cn("absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r", priority.color)} />
 
                 <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3 pt-5 px-5">
                     <div className="space-y-2 flex-1 min-w-0">
@@ -206,34 +213,13 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                             <Badge variant="outline" className="rounded-lg bg-slate-50/80 text-slate-600 border-slate-200/60 text-[10px] font-semibold px-2 py-0.5">
                                 {task.department}
                             </Badge>
-                            {task.is_strategic && (
-                                <Badge className="rounded-lg bg-gradient-to-r from-violet-500 to-purple-600 text-white border-none flex items-center gap-1 text-[10px] px-2 py-0.5 shadow-sm shadow-violet-500/20">
-                                    <Zap className="h-2.5 w-2.5" /> {t('tasks.strategic')}
-                                </Badge>
-                            )}
                         </div>
                         <h3 className="font-bold text-base text-slate-900 dark:text-white leading-tight line-clamp-2">
                             {task.title}
                         </h3>
                     </div>
 
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 -mr-1 text-slate-400 hover:text-slate-900 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl shadow-xl backdrop-blur-xl w-44">
-                            <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg">
-                                <Eye className="h-4 w-4 text-slate-400" /> {t('common.details')}
-                            </DropdownMenuItem>
-                            {(isOwner || userRole === 'gm') && (
-                                <DropdownMenuItem className="gap-2 cursor-pointer rounded-lg" onClick={() => onEdit?.(task)}>
-                                    <Pencil className="h-4 w-4 text-slate-400" /> {t('common.edit')}
-                                </DropdownMenuItem>
-                            )}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* Menu removed to favor direct click for common UI */}
                 </CardHeader>
 
                 <CardContent className="px-5 pb-4">
@@ -254,8 +240,46 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                     </div>
 
                     <div className="flex items-center justify-between">
-                        <div className="h-7 w-7 rounded-lg border border-slate-100 bg-slate-50 dark:border-slate-800 dark:bg-slate-800 flex items-center justify-center">
-                            <User className="h-3.5 w-3.5 text-slate-400" />
+                        <div className="flex -space-x-2 overflow-hidden">
+                            {(task as any).bookings && (task as any).bookings.length > 0 ? (
+                                (task as any).bookings.map((booking: any) => (
+                                    <TooltipProvider key={booking.id}>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Avatar className="h-8 w-8 rounded-full border-2 border-white dark:border-slate-800 bg-slate-100 flex items-center justify-center shrink-0 shadow-sm transition-transform hover:scale-110">
+                                                    <AvatarImage src={booking.worker?.avatar_url} />
+                                                    <AvatarFallback className="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 font-black text-[10px]">
+                                                        {booking.worker?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p className="text-[10px] font-bold">{booking.worker?.full_name}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                ))
+                            ) : task.assigned_worker ? (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Avatar className="h-8 w-8 rounded-full border-2 border-white dark:border-slate-800 bg-slate-100 flex items-center justify-center shrink-0 shadow-sm">
+                                                <AvatarImage src={task.assigned_worker.avatar_url} />
+                                                <AvatarFallback className="bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 font-black text-[10px]">
+                                                    {task.assigned_worker?.full_name?.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="text-[10px] font-bold">{task.assigned_worker.full_name}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            ) : (
+                                <div className="h-8 w-8 rounded-full border-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50/50">
+                                    <User className="h-3.5 w-3.5 text-slate-300" />
+                                </div>
+                            )}
                         </div>
                         <Badge
                             variant="outline"
@@ -270,82 +294,13 @@ export function TaskCard({ task, onVolunteer, onEdit, onUpdated, userRole, curre
                 </CardContent>
 
                 <CardFooter className="px-5 pb-5 pt-0 gap-2">
-                    {/* CASE 0: GM APPROVAL (Requested tasks) */}
-                    {userRole === 'gm' && task.status === 'requested' ? (
-                        <div className="flex gap-2 w-full">
-                            <Button
-                                variant="outline"
-                                className="flex-1 rounded-xl border-red-200/60 text-red-600 hover:bg-red-50 font-bold h-10 gap-2"
-                                onClick={handleRejectRequest}
-                            >
-                                <XCircle className="h-4 w-4" /> {t('tasks.reject')}
-                            </Button>
-                            <Button
-                                className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 shadow-lg shadow-emerald-500/20 gap-2"
-                                onClick={handleApproveRequest}
-                            >
-                                <CheckCircle2 className="h-4 w-4" /> {t('tasks.approve')}
-                            </Button>
-                        </div>
-                    ) : canManageVolunteers ? (
-                        <Button
-                            className="w-full rounded-xl bg-orange-100 hover:bg-orange-200 text-orange-700 font-bold h-10 border border-orange-200 gap-2"
-                            onClick={() => setShowCandidatesDialog(true)}
-                        >
-                            <Users className="h-4 w-4" />
-                            {volunteers.length} {t('tasks.viewCandidates')}
-                        </Button>
-                    ) : canVolunteer ? (
-                        /* CASE 2: VOLUNTEER (Apply) */
-                        <Button
-                            className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-bold h-10 shadow-lg shadow-blue-500/20 gap-2 transition-all duration-200"
-                            onClick={() => onVolunteer?.(task.id)}
-                        >
-                            <CheckCircle2 className="h-4 w-4" /> {t('tasks.volunteer')}
-                        </Button>
-                    ) : canWithdraw ? (
-                        /* CASE 2.5: WITHDRAW APPLICATION */
-                        <Button
-                            className="w-full rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold h-10 border border-slate-200 gap-2"
-                            onClick={() => onVolunteer?.(task.id)}
-                        >
-                            <XCircle className="h-4 w-4" /> {t('tasks.withdraw')}
-                        </Button>
-                    ) : canReview ? (
-                        /* CASE 3: OWNER REVIEW ACTION */
-                        <Button
-                            className="w-full rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold h-10 shadow-lg shadow-violet-500/20 gap-2"
-                            onClick={() => setShowReviewDialog(true)}
-                        >
-                            <Eye className="h-4 w-4" /> {t('tasks.reviewAndApprove')}
-                        </Button>
-                    ) : canAction ? (
-                        /* CASE 4: WORKER ACTIONS */
-                        <div className="flex gap-2 w-full">
-                            <Button
-                                variant="outline"
-                                className="flex-1 rounded-xl border-blue-200/60 text-blue-600 hover:bg-blue-50 font-medium h-10 gap-2"
-                                onClick={() => setShowProgressDialog(true)}
-                            >
-                                <Clock className="h-4 w-4" /> {t('tasks.progress')}
-                            </Button>
-                            <Button
-                                className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 shadow-lg shadow-emerald-500/20 gap-2"
-                                onClick={() => setShowSubmitDialog(true)}
-                            >
-                                <CheckCircle2 className="h-4 w-4" /> {t('tasks.complete')}
-                            </Button>
-                        </div>
-                    ) : (
-                        /* CASE 5: DEFAULT */
-                        <Button
-                            variant="outline"
-                            className="w-full rounded-xl border-slate-200/60 text-slate-500 font-medium h-10 gap-2"
-                            disabled
-                        >
-                            {task.assigned_worker_id ? (task.status === 'review' ? t('tasks.statusReview') : t('tasks.assigned')) : (hasApplied ? t('tasks.pending') : t('tasks.pending'))}
-                        </Button>
-                    )}
+                    {/* Simplified footer for common UI */}
+                    <div className="flex items-center justify-between w-full">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">KAYIT NO: #{task.id.slice(0, 4)}</span>
+                        {task.status === 'pending' && !task.assigned_worker_id && (
+                            <Badge className="bg-blue-600 text-white border-none text-[10px]">TALEBE AÇIK</Badge>
+                        )}
+                    </div>
                 </CardFooter>
             </Card>
 

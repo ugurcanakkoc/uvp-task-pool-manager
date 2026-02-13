@@ -237,6 +237,20 @@ function DropdownMenuSubContent({
     />
   )
 }
+const DropdownMenuHeader = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "px-2 py-1.5 text-sm font-semibold",
+      className
+    )}
+    {...props}
+  />
+)
+DropdownMenuHeader.displayName = "DropdownMenuHeader"
+
 
 export {
   DropdownMenu,
@@ -244,6 +258,7 @@ export {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuHeader,
   DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuCheckboxItem,

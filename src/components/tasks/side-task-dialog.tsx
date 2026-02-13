@@ -82,13 +82,13 @@ export function SideTaskDialog({ trigger, onSuccess }: SideTaskDialogProps) {
 
             if (error) throw error
 
-            toast.success('Yan görev başarıyla eklendi.')
+            toast.success('Yan destek talebi başarıyla eklendi.')
             form.reset()
             setOpen(false)
             onSuccess?.()
         } catch (error) {
             console.error('Side task error:', error)
-            toast.error('Yan görev eklenirken bir hata oluştu.')
+            toast.error('Yan destek talebi eklenirken bir hata oluştu.')
         } finally {
             setIsSubmitting(false)
         }
@@ -100,13 +100,13 @@ export function SideTaskDialog({ trigger, onSuccess }: SideTaskDialogProps) {
                 {trigger || (
                     <Button variant="outline" size="sm" className="gap-2">
                         <Plus className="h-4 w-4" />
-                        Yan Görev Ekle
+                        Yan Destek Talebi Ekle
                     </Button>
                 )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Yan Görev Ekle</DialogTitle>
+                    <DialogTitle>Yan Destek Talebi Ekle</DialogTitle>
                     <DialogDescription>
                         Proje dışı eforlarınızı (bakım, temizlik, idari işler vb.) buradan kaydedebilirsiniz.
                     </DialogDescription>

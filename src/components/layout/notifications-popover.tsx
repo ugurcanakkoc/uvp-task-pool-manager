@@ -51,32 +51,7 @@ export function NotificationsPopover() {
 
     useEffect(() => {
         fetchNotifications()
-
-        // Realtime subscription
-        if (!user) return
-
-        const channel = supabase
-            .channel('notifications-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'notifications',
-                    filter: `user_id=eq.${user.id}`,
-                },
-                (payload: { new: { [key: string]: any } }) => {
-                    const newNotification = payload.new as Notification
-                    setNotifications((prev) => [newNotification, ...prev])
-                    setUnreadCount((prev) => prev + 1)
-                }
-            )
-            .subscribe()
-
-        return () => {
-            supabase.removeChannel(channel)
-        }
-    }, [user, supabase])
+    }, [user])
 
     const markAsRead = async (id: string) => {
         // Optimistic update

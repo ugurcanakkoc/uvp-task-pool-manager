@@ -14,7 +14,8 @@ import {
     Layers,
     HelpCircle,
     Code2,
-    BadgeCheck
+    BadgeCheck,
+    Clock
 } from 'lucide-react'
 
 export type NavItem = {
@@ -32,26 +33,36 @@ export const navItems: NavItem[] = [
         icon: LayoutDashboard,
         roles: ['gm', 'owner', 'worker']
     },
-    // GM & Owner & Worker: Task Pool (Görev Havuzu + Açık İlanlar birleştirildi)
+    /* 
     {
-        title: 'Görev Havuzu',
+        title: 'Destek Talebi Havuzu',
         href: '/pool',
         icon: Layers,
         roles: ['gm', 'owner', 'worker']
     },
+    */
     {
         title: 'Takvim (Gantt)',
         href: '/calendar',
         icon: Calendar,
         roles: ['gm', 'owner', 'worker']
     },
-    // Global: Gamification (Leaderboard)
+    /*
+    {
+        title: 'Ajanda',
+        href: '/agenda',
+        icon: Clock,
+        roles: ['gm', 'owner', 'worker']
+    },
+    */
+    /*
     {
         title: 'Liderlik Tablosu',
         href: '/leaderboard',
         icon: Trophy,
         roles: ['gm', 'owner', 'worker']
     },
+    */
     // GM: Reports
     {
         title: 'Raporlar ve Analiz',
@@ -88,10 +99,12 @@ export const navItems: NavItem[] = [
         roles: ['gm']
     },
     // GM & Owner: API Documentation
+    /*
     {
         title: 'API Dökümanı',
         href: '/api-docs',
         icon: Code2,
         roles: ['gm', 'owner']
     }
+    */
 ]

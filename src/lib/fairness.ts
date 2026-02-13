@@ -46,7 +46,7 @@ export async function checkWorkerLoad(workerId: string): Promise<WorkloadCheckRe
             isOverloaded: true,
             activeTaskCount,
             utilization,
-            message: `Kullanıcının üzerinde zaten ${activeTaskCount} aktif görev var.`
+            message: `Kullanıcının üzerinde zaten ${activeTaskCount} aktif destek talebi var.`
         }
     }
 

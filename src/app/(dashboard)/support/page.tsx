@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { SupportRequestDialog } from '@/components/support/support-request-dialog'
 
 interface SupportRequest {
     id: string
@@ -47,12 +48,6 @@ interface SupportRequest {
 export default function SupportPage() {
     const [requests, setRequests] = useState<SupportRequest[]>([])
     const [isLoading, setIsLoading] = useState(true)
-    const [showForm, setShowForm] = useState(false)
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [title, setTitle] = useState('')
-    const [description, setDescription] = useState('')
-    const [category, setCategory] = useState('')
-    const [priority, setPriority] = useState('normal')
     const supabase = createClient()
     const { user } = useAuthStore()
 
@@ -74,35 +69,6 @@ export default function SupportPage() {
         setIsLoading(false)
     }
 
-    const handleSubmit = async () => {
-        if (!title.trim() || !description.trim() || !category) {
-            toast.error('Lütfen tüm alanları doldurun.')
-            return
-        }
-
-        setIsSubmitting(true)
-        const { error } = await supabase.from('support_requests').insert({
-            user_id: user?.id,
-            title: title.trim(),
-            description: description.trim(),
-            category,
-            priority,
-            status: 'open'
-        })
-
-        if (!error) {
-            toast.success('Destek talebiniz başarıyla oluşturuldu!')
-            setTitle('')
-            setDescription('')
-            setCategory('')
-            setPriority('normal')
-            setShowForm(false)
-            fetchRequests()
-        } else {
-            toast.error('Hata: ' + error.message)
-        }
-        setIsSubmitting(false)
-    }
 
     const getStatusInfo = (status: string) => {
         switch (status) {
@@ -130,66 +96,8 @@ export default function SupportPage() {
                         <h1 className="text-2xl font-black text-slate-900 dark:text-white">Destek Talepleri</h1>
                         <p className="text-sm text-slate-500">GM'e destek talebi gönderin veya mevcut taleplerinizi takip edin</p>
                     </div>
-                    <Button onClick={() => setShowForm(!showForm)} className="gap-2 rounded-xl bg-blue-600 hover:bg-blue-700">
-                        <Plus className="h-4 w-4" /> Yeni Talep
-                    </Button>
+                    <SupportRequestDialog onSuccess={fetchRequests} />
                 </div>
-
-                {/* New Request Form */}
-                {showForm && (
-                    <Card className="border-none shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-l-4 border-l-blue-500">
-                        <CardContent className="p-6 space-y-4">
-                            <h3 className="font-bold text-sm">Yeni Destek Talebi</h3>
-
-                            <Input
-                                placeholder="Talep başlığı"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="rounded-xl h-11"
-                            />
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <Select value={category} onValueChange={setCategory}>
-                                    <SelectTrigger className="rounded-xl h-11">
-                                        <SelectValue placeholder="Kategori seçin" />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl">
-                                        {categories.map(c => (
-                                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                <Select value={priority} onValueChange={setPriority}>
-                                    <SelectTrigger className="rounded-xl h-11">
-                                        <SelectValue placeholder="Öncelik" />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl">
-                                        <SelectItem value="low">Düşük</SelectItem>
-                                        <SelectItem value="normal">Normal</SelectItem>
-                                        <SelectItem value="high">Yüksek</SelectItem>
-                                        <SelectItem value="urgent">Acil</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <Textarea
-                                placeholder="Detaylı açıklama yazın..."
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                className="rounded-xl min-h-[100px] resize-none"
-                            />
-
-                            <div className="flex justify-end gap-2">
-                                <Button variant="outline" onClick={() => setShowForm(false)} className="rounded-xl">İptal</Button>
-                                <Button onClick={handleSubmit} disabled={isSubmitting} className="gap-2 rounded-xl bg-blue-600 hover:bg-blue-700">
-                                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                                    Gönder
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
 
                 {/* Request List */}
                 <Card className="border-none shadow-lg bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm">

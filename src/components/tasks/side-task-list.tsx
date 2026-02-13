@@ -47,7 +47,7 @@ export function SideTaskList({ mode = 'personal' }: SideTaskListProps) {
         setIsLoading(true)
         let query = supabase
             .from('side_tasks')
-            .select('*, users(full_name)')
+            .select('*, users!user_id(full_name)')
             .order('start_time', { ascending: false })
 
         if (mode === 'personal' && user) {
@@ -58,7 +58,7 @@ export function SideTaskList({ mode = 'personal' }: SideTaskListProps) {
 
         if (error) {
             console.error('Error fetching side tasks:', error)
-            toast.error('Yan görevler yüklenirken hata oluştu.')
+            toast.error('Yan destek talepleri yüklenirken hata oluştu.')
         } else {
             setTasks(data || [])
         }
@@ -76,9 +76,9 @@ export function SideTaskList({ mode = 'personal' }: SideTaskListProps) {
             .eq('id', id)
 
         if (error) {
-            toast.error('Yan görev silinirken hata oluştu.')
+            toast.error('Yan destek talebi silinirken hata oluştu.')
         } else {
-            toast.success('Yan görev silindi.')
+            toast.success('Yan destek talebi silindi.')
             fetchTasks()
         }
     }
@@ -95,7 +95,7 @@ export function SideTaskList({ mode = 'personal' }: SideTaskListProps) {
 
             if (!response.ok) throw new Error(data.error)
 
-            toast.success(`Yan görev tamamlandı! +${data.pointsAwarded || 10} Puan 🌟`)
+            toast.success(`Yan destek talebi tamamlandı! +${data.pointsAwarded || 10} Puan 🌟`)
             fetchTasks()
         } catch (error) {
             console.error('Error completing task:', error)
@@ -117,17 +117,17 @@ export function SideTaskList({ mode = 'personal' }: SideTaskListProps) {
     }
 
     return (
-        <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+        <Card className="border-none shadow-[0px_18px_40px_rgba(112,144,176,0.12)] bg-white dark:bg-slate-900 rounded-[20px]">
             <CardHeader className="flex flex-row items-center justify-between py-4">
                 <CardTitle className="text-lg font-semibold">
-                    {mode === 'all' ? 'Tüm Yan Görevler' : 'Yan Görevlerim'}
+                    {mode === 'all' ? 'Tüm Yan Destek Talepleri' : 'Yan Destek Taleplerim'}
                 </CardTitle>
                 {mode === 'personal' && <SideTaskDialog onSuccess={fetchTasks} />}
             </CardHeader>
             <CardContent>
                 {tasks.length === 0 ? (
                     <div className="text-center py-8 text-slate-500 text-sm">
-                        Henüz yan görev kaydı yok.
+                        Henüz yan destek talebi kaydı yok.
                     </div>
                 ) : (
                     <div className="space-y-4">

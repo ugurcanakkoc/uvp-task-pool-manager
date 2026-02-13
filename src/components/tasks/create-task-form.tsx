@@ -15,7 +15,8 @@ import {
     Hammer,
     Layout,
     Sparkles,
-    Search
+    Search,
+    CheckCircle2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -65,7 +66,7 @@ const taskSchema = z.object({
     description: z.string().min(20, 'Açıklama en az 20 karakter olmalıdır'),
     department: z.string().min(1, 'Lütfen bir departman seçin'),
     assigned_worker_id: z.string().optional(),
-    task_type: z.string().min(1, 'Lütfen görev tipi seçin'),
+    task_type: z.string().min(1, 'Lütfen destek talebi tipi seçin'),
     priority: z.string().min(1, 'Lütfen öncelik seçin'),
     start_date: z.date({ required_error: 'Başlangıç tarihi zorunludur' }),
     end_date: z.date({ required_error: 'Bitiş tarihi zorunludur' }),
@@ -100,7 +101,7 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
             description: '',
             department: '',
             assigned_worker_id: '',
-            task_type: 'Havuz Görevi',
+            task_type: 'Havuz Destek Talebi',
             priority: '3',
             is_strategic: false,
             is_production: false,
@@ -160,6 +161,7 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
     // Fetch workers with their skills and active task count
     const [workers, setWorkers] = useState<any[]>([])
     const [skillFilter, setSkillFilter] = useState<string>('')
+    const [searchQuery, setSearchQuery] = useState('')
     const [allSkillNames, setAllSkillNames] = useState<string[]>([])
 
     useEffect(() => {
@@ -169,9 +171,11 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
                 .select(`
                     id, 
                     full_name, 
+                    role,
                     department,
                     items: skills(skill_name),
-                    active_tasks: tasks(count)
+                    active_tasks: tasks(count),
+                    support_slots: personal_tasks(can_support, is_recurring, recurring_days, start_date, end_date)
                 `)
                 .eq('role', 'worker')
                 .eq('is_active', true)
@@ -180,7 +184,8 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
                 const formattedWorkers = workerData.map((w: any) => ({
                     ...w,
                     skill_names: w.items?.map((s: any) => s.skill_name) || [],
-                    active_task_count: w.active_tasks?.[0]?.count || 0
+                    active_task_count: w.active_tasks?.[0]?.count || 0,
+                    can_support_now: w.support_slots?.some((s: any) => s.can_support) || false
                 }))
                 setWorkers(formattedWorkers)
 
@@ -206,13 +211,23 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
         )
     }, [titleInput, workers])
 
-    // Filter workers by selected skill
+    // Filter workers by selected skill and search query
     const filteredWorkers = useMemo(() => {
-        if (!skillFilter) return workers
-        return workers.filter(w =>
-            w.skill_names.some((s: string) => s.toLowerCase() === skillFilter.toLowerCase())
-        )
-    }, [skillFilter, workers])
+        let result = workers
+        if (skillFilter) {
+            result = result.filter(w =>
+                w.skill_names.some((s: string) => s.toLowerCase() === skillFilter.toLowerCase())
+            )
+        }
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase().trim()
+            result = result.filter(w =>
+                w.full_name?.toLowerCase().includes(query) ||
+                w.department?.toLowerCase().includes(query)
+            )
+        }
+        return result
+    }, [skillFilter, searchQuery, workers])
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -324,7 +339,7 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
                                                     />
                                                 </FormControl>
                                                 <FormDescription className="text-[10px] text-orange-500">
-                                                    Yüksek öncelikli görevler için sipariş numarası girilmesi önerilir.
+                                                    Yüksek öncelikli destek talepleri için sipariş numarası girilmesi önerilir.
                                                 </FormDescription>
                                                 <FormMessage />
                                             </FormItem>
@@ -377,23 +392,37 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
                                 </>
                             )}
 
-                            {/* Skill Filter */}
-                            <div className="col-span-1 md:col-span-2 space-y-2">
-                                <Label className="font-bold text-sm flex items-center gap-2">
-                                    <Search className="w-4 h-4 text-blue-500" />
-                                    Yeteneğe Göre Filtrele
-                                </Label>
-                                <Select value={skillFilter} onValueChange={(v) => setSkillFilter(v === '__all__' ? '' : v)}>
-                                    <SelectTrigger className="rounded-xl h-10 bg-blue-50/50 border-blue-200 text-sm">
-                                        <SelectValue placeholder="Tüm yetenekler (filtre yok)" />
-                                    </SelectTrigger>
-                                    <SelectContent className="rounded-xl border-slate-200 shadow-xl max-h-[250px]">
-                                        <SelectItem value="__all__">Tüm Yetenekler (Filtre Yok)</SelectItem>
-                                        {allSkillNames.map(skill => (
-                                            <SelectItem key={skill} value={skill}>{skill}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                            {/* Worker Search & Skill Filter */}
+                            <div className="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label className="font-bold text-sm flex items-center gap-2">
+                                        <Search className="w-4 h-4 text-blue-500" />
+                                        İsim veya Departman Ara
+                                    </Label>
+                                    <Input
+                                        placeholder="İsim, departman..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="rounded-xl h-10 bg-blue-50/50 border-blue-200 text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="font-bold text-sm flex items-center gap-2">
+                                        <Search className="w-4 h-4 text-blue-500" />
+                                        Yeteneğe Göre Filtrele
+                                    </Label>
+                                    <Select value={skillFilter} onValueChange={(v) => setSkillFilter(v === '__all__' ? '' : v)}>
+                                        <SelectTrigger className="rounded-xl h-10 bg-blue-50/50 border-blue-200 text-sm">
+                                            <SelectValue placeholder="Tüm yetenekler (filtre yok)" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl border-slate-200 shadow-xl max-h-[250px]">
+                                            <SelectItem value="__all__">Tüm Yetenekler (Filtre Yok)</SelectItem>
+                                            {allSkillNames.map(skill => (
+                                                <SelectItem key={skill} value={skill}>{skill}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
 
                             <FormField
@@ -424,9 +453,14 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
                                                                         ))}
                                                                         {worker.skill_names.length > 3 && <span className="text-[9px] text-slate-400">+{worker.skill_names.length - 3}</span>}
                                                                     </div>
-                                                                    <span className="text-[10px] text-muted-foreground flex gap-1 mt-0.5">
+                                                                    <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                                                                         {worker.department}
                                                                         {worker.active_task_count > 2 && <span className="text-red-500 font-bold ml-1">(Yoğun!)</span>}
+                                                                        {worker.can_support_now && (
+                                                                            <span className="flex items-center gap-1 text-emerald-600 font-black ml-2 bg-emerald-50 px-1 rounded">
+                                                                                <CheckCircle2 className="w-3 h-3" /> DESTEK OLABİLİR
+                                                                            </span>
+                                                                        )}
                                                                     </span>
                                                                 </div>
                                                             </SelectItem>
@@ -447,9 +481,14 @@ export function CreateTaskForm({ onSuccess }: CreateTaskFormProps) {
                                                                     ))}
                                                                     {worker.skill_names.length > 3 && <span className="text-[9px] text-slate-400">+{worker.skill_names.length - 3}</span>}
                                                                 </div>
-                                                                <span className="text-[10px] text-muted-foreground flex gap-1 mt-0.5">
+                                                                <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                                                                     {worker.department}
                                                                     {worker.active_task_count > 2 && <span className="text-red-500 font-bold ml-1">(Yoğun!)</span>}
+                                                                    {worker.can_support_now && (
+                                                                        <span className="flex items-center gap-1 text-emerald-600 font-black ml-2 bg-emerald-50 px-1 rounded">
+                                                                            <CheckCircle2 className="w-3 h-3" /> DESTEK OLABİLİR
+                                                                        </span>
+                                                                    )}
                                                                 </span>
                                                             </div>
                                                         </SelectItem>

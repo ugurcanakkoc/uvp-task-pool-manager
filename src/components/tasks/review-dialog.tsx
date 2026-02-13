@@ -102,9 +102,9 @@ export function ReviewDialog({ taskId, trigger, open: controlledOpen, onOpenChan
             }
 
             if (data.pointsAwarded && data.pointsAwarded > 0) {
-                toast.success(`Görev onaylandı! Çalışana ${data.pointsAwarded} puan kazandırıldı. 🏆`)
+                toast.success(`Destek talebi onaylandı! Çalışana ${data.pointsAwarded} puan kazandırıldı. 🏆`)
             } else {
-                toast.success(action === 'approve' ? 'Görev onaylandı ve tamamlandı.' : 'Görev revizyon için iade edildi.')
+                toast.success(action === 'approve' ? 'Destek talebi onaylandı ve tamamlandı.' : 'Destek talebi revizyon için iade edildi.')
             }
 
             form.reset()
@@ -123,7 +123,7 @@ export function ReviewDialog({ taskId, trigger, open: controlledOpen, onOpenChan
             {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Görevi İncele</DialogTitle>
+                    <DialogTitle>Destek Talebini İncele</DialogTitle>
                     <DialogDescription>
                         Çalışanın gönderdiği teslim notunu inceleyin ve onaylayın veya revizyon isteyin.
                     </DialogDescription>

@@ -95,7 +95,7 @@ export function ProgressDialog({ taskId, trigger, open: controlledOpen, onOpenCh
                 <DialogHeader>
                     <DialogTitle>İlerleme Kaydı Ekle</DialogTitle>
                     <DialogDescription>
-                        Bugün bu görev üzerinde neler yaptığınızı detaylıca açıklayın.
+                        Bugün bu destek talebi üzerinde neler yaptığınızı detaylıca açıklayın.
                         En az 50 karakter gereklidir.
                     </DialogDescription>
                 </DialogHeader>

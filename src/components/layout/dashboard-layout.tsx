@@ -39,9 +39,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex flex-1 flex-col md:pl-72">
+            <div className="flex flex-1 flex-col md:pl-72 min-w-0 w-full overflow-hidden">
                 <Header />
-                <main className="flex-1 p-4 md:p-8 overflow-y-auto">
+                <main className="flex-1 p-4 md:p-8 overflow-y-auto overflow-x-hidden min-w-0">
                     {children}
                 </main>
             </div>
