@@ -29,13 +29,12 @@ export default function CalendarPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <PersonalTaskDialog onSuccess={handleRefresh} />
                         <ResourceRequestModal
                             onSuccess={handleRefresh}
                             trigger={
-                                <Button className="gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none h-11 font-bold">
+                                <Button className="gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none h-11 font-bold px-6">
                                     <Users className="w-4 h-4" />
-                                    Havuzdan Kaynak Talebi
+                                    Destek Talebi
                                 </Button>
                             }
                         />

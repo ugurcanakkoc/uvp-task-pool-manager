@@ -30,6 +30,13 @@ import {
 } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TaskDetailDialog } from './task-detail-dialog'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog"
 
 interface Task {
     id: string
@@ -55,6 +62,8 @@ interface Task {
     bookings?: {
         id: string
         worker_id: string
+        start_date: string
+        end_date: string
         worker: {
             full_name: string
             avatar_url?: string
@@ -77,7 +86,7 @@ export function GanttChart({ refreshTrigger = 0 }: GanttChartProps) {
     const [containerWidth, setContainerWidth] = useState(0)
 
     // Timeline state
-    const [viewDate, setViewDate] = useState(startOfDay(new Date()))
+    const [viewDate, setViewDate] = useState(addDays(startOfDay(new Date()), -2))
     const [daysToShow, setDaysToShow] = useState(60)
     const [sidebarWidth, setSidebarWidth] = useState(300)
     const [isResizing, setIsResizing] = useState(false)
@@ -87,6 +96,11 @@ export function GanttChart({ refreshTrigger = 0 }: GanttChartProps) {
     const [filterAssignment, setFilterAssignment] = useState<string>('all')
     const [filterStatus, setFilterStatus] = useState<string>('all')
     const [searchQuery, setSearchQuery] = useState('')
+
+    // List Dialog State
+    const [listTitle, setListTitle] = useState('')
+    const [listTasks, setListTasks] = useState<Task[]>([])
+    const [isListOpen, setIsListOpen] = useState(false)
 
     const dateLocale = locale === 'tr' ? tr : locale === 'de' ? de : enUS
 
@@ -112,6 +126,8 @@ export function GanttChart({ refreshTrigger = 0 }: GanttChartProps) {
                 bookings(
                     id,
                     worker_id,
+                    start_date,
+                    end_date,
                     worker:users!worker_id(full_name, avatar_url)
                 )
             `)
@@ -169,7 +185,11 @@ export function GanttChart({ refreshTrigger = 0 }: GanttChartProps) {
     }, [tasks, searchQuery, filterDept, filterAssignment, filterStatus])
 
     const unassignedTasks = useMemo(() => {
-        return tasks.filter(t => (!t.bookings || t.bookings.length === 0) && t.status !== 'cancelled' && t.status !== 'completed')
+        return tasks.filter(t => (!t.bookings || t.bookings.length === 0) && t.status !== 'requested' && t.status !== 'cancelled' && t.status !== 'completed')
+    }, [tasks])
+
+    const pendingTasks = useMemo(() => {
+        return tasks.filter(t => t.status === 'requested')
     }, [tasks])
 
     const departments = useMemo(() => {
@@ -263,6 +283,21 @@ export function GanttChart({ refreshTrigger = 0 }: GanttChartProps) {
     const handleTaskClick = (task: Task) => {
         setSelectedTask(task)
         setIsDialogOpen(true)
+        setIsListOpen(false)
+    }
+
+    const scrollToToday = () => {
+        const today = startOfDay(new Date())
+        // Reset the view date to 2 days before today
+        setViewDate(addDays(today, -2))
+
+        // Scroll to the left to ensure the new view starts at the beginning
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+                left: 0,
+                behavior: 'smooth'
+            })
+        }
     }
 
     if (isLoading) {
@@ -280,56 +315,74 @@ export function GanttChart({ refreshTrigger = 0 }: GanttChartProps) {
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
-                        size="icon"
-                        className="h-8 w-8 rounded-lg border-slate-200"
-                        onClick={() => setViewDate(prev => addDays(prev, -1))}
+                        size="sm"
+                        className="h-8 rounded-lg border-slate-200 px-3 font-black text-[10px] uppercase tracking-widest text-indigo-600 hover:text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 transition-all"
+                        onClick={scrollToToday}
                     >
-                        <ChevronLeft className="h-4 w-4" />
+                        Bugün
                     </Button>
-                    <span className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase min-w-[160px] text-center tracking-tight">
-                        {format(viewDate, 'd MMMM yyyy', { locale: dateLocale })}
-                    </span>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 rounded-lg border-slate-200"
-                        onClick={() => setViewDate(prev => addDays(prev, 1))}
-                    >
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 ml-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg border-slate-200"
+                            onClick={() => setViewDate(prev => addDays(prev, -1))}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase min-w-[160px] text-center tracking-tight">
+                            {format(viewDate, 'd MMMM yyyy', { locale: dateLocale })}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg border-slate-200"
+                            onClick={() => setViewDate(prev => addDays(prev, 1))}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                    {/* Onay Bekleyenler Header Widget */}
+                    {pendingTasks.length > 0 && (
+                        <div
+                            onClick={() => {
+                                setListTitle('Onay Bekleyen Talepler')
+                                setListTasks(pendingTasks)
+                                setIsListOpen(true)
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl border border-indigo-100 dark:border-indigo-900/30 cursor-pointer hover:bg-indigo-100 transition-all shadow-sm"
+                        >
+                            <div className="relative">
+                                <Clock className="w-4 h-4 animate-pulse" />
+                                <div className="absolute -top-1 -right-1 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white dark:border-slate-900" />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-tight">
+                                {pendingTasks.length} Onay Bekleyen
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Atanmamış İşler Header Widget */}
                     {unassignedTasks.length > 0 && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-100 dark:border-amber-900/30 cursor-help animate-in fade-in slide-in-from-right-4 duration-500">
-                                        <div className="relative">
-                                            <Clock className="w-4 h-4 animate-pulse" />
-                                            <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900" />
-                                        </div>
-                                        <span className="text-xs font-black uppercase tracking-tight">
-                                            {unassignedTasks.length} Atanmamış İş
-                                        </span>
-                                    </div>
-                                </TooltipTrigger>
-                                <TooltipContent className="p-4 w-72 bg-slate-900 text-white border-none rounded-2xl shadow-2xl" side="bottom" align="end">
-                                    <div className="space-y-3">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-800 pb-2">Henüz Atama Yapılmamış Destek Talepleri</p>
-                                        <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
-                                            {unassignedTasks.map(ut => (
-                                                <div key={ut.id} className="group flex flex-col gap-1 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer" onClick={() => handleTaskClick(ut)}>
-                                                    <span className="text-xs font-bold leading-snug group-hover:text-amber-400 transition-colors">{ut.title}</span>
-                                                    <span className="text-[9px] font-black text-slate-500 uppercase">{ut.department}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <p className="text-[9px] font-bold text-slate-500 italic pt-1 border-t border-slate-800">Detay ve atama için işin üzerine tıklayın.</p>
-                                    </div>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
+                        <div
+                            onClick={() => {
+                                setListTitle('Atama Bekleyen Talepler')
+                                setListTasks(unassignedTasks)
+                                setIsListOpen(true)
+                            }}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-xl border border-amber-100 dark:border-amber-900/30 cursor-pointer hover:bg-amber-100 transition-all shadow-sm"
+                        >
+                            <div className="relative">
+                                <UserCircle className="w-4 h-4 animate-pulse" />
+                                <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-900" />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-tight">
+                                {unassignedTasks.length} Atanmamış İş
+                            </span>
+                        </div>
                     )}
                 </div>
             </div>
@@ -579,6 +632,63 @@ export function GanttChart({ refreshTrigger = 0 }: GanttChartProps) {
                 onOpenChange={setIsDialogOpen}
                 onSuccess={fetchTasks}
             />
+
+            {/* Support List Dialog (Pending/Unassigned) */}
+            <Dialog open={isListOpen} onOpenChange={setIsListOpen}>
+                <DialogContent className="sm:max-w-[550px] rounded-[32px] p-0 overflow-hidden border-none shadow-2xl">
+                    <DialogHeader className={cn(
+                        "p-8 text-white",
+                        listTitle.includes('Onay') ? "bg-gradient-to-br from-indigo-500 to-blue-600" : "bg-gradient-to-br from-amber-500 to-orange-600"
+                    )}>
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                                {listTitle.includes('Onay') ? <Clock className="w-6 h-6" /> : <UserCircle className="w-6 h-6" />}
+                            </div>
+                            <div>
+                                <DialogTitle className="text-2xl font-black">{listTitle}</DialogTitle>
+                                <DialogDescription className="text-white/80 font-bold opacity-90">
+                                    {listTasks.length} Farklı Talep Bulunuyor
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar bg-slate-50/50">
+                        {listTasks.map((task) => (
+                            <div
+                                key={task.id}
+                                onClick={() => handleTaskClick(task)}
+                                className="group flex items-center justify-between p-4 rounded-[24px] bg-white border border-slate-100 hover:border-indigo-200 hover:shadow-md transition-all cursor-pointer"
+                            >
+                                <div className="space-y-1">
+                                    <h4 className="font-bold text-slate-800 group-hover:text-indigo-600 transition-colors line-clamp-1 text-sm">
+                                        {task.title}
+                                    </h4>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-[9px] font-black uppercase tracking-tight py-0 bg-slate-50 border-slate-200 text-slate-500">
+                                            {task.department}
+                                        </Badge>
+                                        <span className="text-[10px] font-bold text-slate-400">#{task.id.slice(0, 4).toUpperCase()}</span>
+                                    </div>
+                                </div>
+                                <div className="w-10 h-10 rounded-xl bg-slate-50 group-hover:bg-indigo-50 flex items-center justify-center text-slate-300 group-hover:text-indigo-500 transition-all flex-shrink-0">
+                                    <ChevronRight className="w-5 h-5" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="p-4 bg-white border-t border-slate-100 flex justify-end">
+                        <Button
+                            variant="ghost"
+                            onClick={() => setIsListOpen(false)}
+                            className="text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600"
+                        >
+                            Kapat
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

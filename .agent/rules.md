@@ -47,3 +47,10 @@
 - Conventional Commits kullan: feat:, fix:, chore:, docs:, test:
 - Her PR tek bir özellik veya fix içermeli.
 - PR açıklamasında ne değiştiğini Türkçe yaz.
+
+## Kritik Bileşenler ve Stabilite
+- **Dashboard Güvenliği:** Dashboard sayfası projenin kalbidir ve şu an tam fonksiyonel çalışmaktadır (GM rolü dahil). Başka bir sayfada yapılan değişikliklerin Dashboard'u bozmamasına KRİTİK derecede önem verilir.
+- **Etki Bildirimi:** Eğer yapılan bir geliştirme Dashboard'u veya ortak kullanılan (TaskDetailDialog, TaskCard vb.) bileşenleri etkiliyorsa, bu durum mutlaka kullanıcıya bildirilmeli, nedeni açıklanmalı ve en mantıklı çözüm üzerinde mutabık kalınmalıdır.
+- **Kalite Standartları:** "Sadece işi çözsün" mantığıyla yazılmış geçici (quick-fix) kodlardan kaçınılmalıdır. Kodun temiz, okunabilir ve sürdürülebilir olması her şeyden önceliklidir.
+- **Mimari Disiplin:** Karmaşık, dağınık kodlar ve bozuk klasör yapısı kabul edilemez. Mevcut klasör yapısına ve tip güvenliğine sadık kalınmalıdır.
+- **Bileşen Yeniden Kullanımı:** Yeni bileşen oluşturmak yerine, mevcut ve test edilmiş bileşenleri (TaskDetailDialog vb.) ortaklaştırmak ve bağlamlarını bağlamak öncelikli kuraldır.

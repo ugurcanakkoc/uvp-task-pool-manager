@@ -34,7 +34,7 @@
   "nav": {
     "menu": "MENÜ",
     "dashboard": "Dashboard",
-    "taskPool": "Destek Talebi Havuzu",
+    "taskPool": "Destek Talebi",
     "calendar": "Takvim (Gantt)",
     "teamSkills": "Ekip & Yetkinlikler",
     "leaderboard": "Liderlik Tablosu",
@@ -44,7 +44,7 @@
     "myTasks": "Destek Taleplerim",
     "sideTasks": "Yan Destek Talepleri",
     "badges": "Rozetlerim",
-    "supportRequests": "Destek Talepleri",
+    "supportRequests": "Destek Taleplerim",
     "agenda": "Ajanda"
   },
   "gm": {

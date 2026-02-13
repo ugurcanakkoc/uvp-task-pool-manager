@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
-import { format } from 'date-fns'
+import { format, differenceInDays } from 'date-fns'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ResourceRequestModal } from './resource-request-modal'
@@ -50,6 +50,8 @@ interface Task {
     bookings?: {
         id: string
         worker_id: string
+        start_date: string
+        end_date: string
         worker: {
             full_name: string
             avatar_url?: string
@@ -83,13 +85,24 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSuccess }: TaskDe
     const canEdit = isGM || (isOwner && task.status !== 'completed' && task.status !== 'cancelled')
 
     const handleUpdateStatus = async (newStatus: string) => {
+        // Enforce: Cannot be active without workers
+        let targetStatus = newStatus
+        const workerCount = task.bookings?.length || 0
+
+        if (newStatus === 'active' && workerCount === 0) {
+            targetStatus = 'pending'
+            toast.info('Henüz kişi atanmadığı için talep havuza (Atanmamış İşler) alındı.')
+        }
+
         setIsSubmitting(true)
         try {
-            const updates: any = { status: newStatus }
-            if (newStatus === 'active' && isGM) {
-                updates.gm_approved = true
-                updates.gm_approved_by = user?.id
-                updates.approved_at = new Date().toISOString()
+            const updates: any = { status: targetStatus }
+            if (targetStatus === 'active' || targetStatus === 'pending') {
+                if (isGM) {
+                    updates.gm_approved = true
+                    updates.gm_approved_by = user?.id
+                    updates.approved_at = new Date().toISOString()
+                }
             }
 
             const { error } = await supabase
@@ -98,7 +111,13 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSuccess }: TaskDe
                 .eq('id', task.id)
 
             if (error) throw error
-            toast.success('Destek talebi durumu güncellendi.')
+
+            if (targetStatus === 'pending' && newStatus === 'active') {
+                toast.success('Talep onaylandı ve havuza eklendi.')
+            } else {
+                toast.success('Destek talebi durumu güncellendi.')
+            }
+
             onSuccess()
             onOpenChange(false)
         } catch (error) {
@@ -215,17 +234,25 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSuccess }: TaskDe
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {task.bookings && task.bookings.length > 0 ? (
-                                task.bookings.map(booking => (
-                                    <div key={booking.id} className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                        <Avatar className="h-8 w-8 ring-2 ring-white">
-                                            <AvatarImage src={booking.worker.avatar_url || ''} />
-                                            <AvatarFallback className="bg-blue-600 text-white font-black text-[10px]">
-                                                {booking.worker.full_name.charAt(0)}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <span className="text-xs font-black text-slate-700 truncate">{booking.worker.full_name}</span>
-                                    </div>
-                                ))
+                                task.bookings.map(booking => {
+                                    const duration = differenceInDays(new Date(booking.end_date), new Date(booking.start_date)) + 1
+                                    return (
+                                        <div key={booking.id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <Avatar className="h-8 w-8 ring-2 ring-white">
+                                                    <AvatarImage src={booking.worker.avatar_url || ''} />
+                                                    <AvatarFallback className="bg-blue-600 text-white font-black text-[10px]">
+                                                        {booking.worker.full_name.charAt(0)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="text-xs font-black text-slate-700 truncate">{booking.worker.full_name}</span>
+                                            </div>
+                                            <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black text-[10px] shrink-0">
+                                                {duration} GÜN
+                                            </Badge>
+                                        </div>
+                                    )
+                                })
                             ) : (
                                 <div className="col-span-full p-4 border-2 border-dashed border-slate-100 rounded-2xl text-center">
                                     <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">Henüz kimse atanmadı</p>

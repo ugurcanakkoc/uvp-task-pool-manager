@@ -265,7 +265,8 @@ export function ResourceRequestModal({ onSuccess, trigger, editingTask, open: co
                     priority: parseInt(priority),
                     start_date: startDate,
                     end_date: endDate,
-                    task_type: selectedPeople.size > 0 ? 'development' : 'pool'
+                    task_type: selectedPeople.size > 0 ? 'development' : 'pool',
+                    status: (editingTask.status === 'active' && selectedPeople.size === 0) ? 'pending' : editingTask.status
                 }
 
                 // If NOT GM, every edit requires new approval
@@ -298,7 +299,7 @@ export function ResourceRequestModal({ onSuccess, trigger, editingTask, open: co
                         department: user?.department || 'Genel',
                         owner_id: user?.id,
                         task_type: selectedPeople.size > 0 ? 'development' : 'pool',
-                        status: user?.role === 'gm' ? 'active' : 'requested',
+                        status: user?.role === 'gm' ? (selectedPeople.size > 0 ? 'active' : 'pending') : 'requested',
                         gm_approved: user?.role === 'gm',
                         gm_approved_by: user?.role === 'gm' ? user?.id : null,
                         approved_at: user?.role === 'gm' ? new Date().toISOString() : null
@@ -360,19 +361,19 @@ export function ResourceRequestModal({ onSuccess, trigger, editingTask, open: co
             {!trigger && controlledOpen === undefined && (
                 <DialogTrigger asChild>
                     <Button className="gap-2 rounded-xl bg-blue-600 hover:bg-blue-700">
-                        <Plus className="h-4 w-4" /> Yeni Kaynak Talebi
+                        <Plus className="h-4 w-4" /> Yeni Destek Talebi
                     </Button>
                 </DialogTrigger>
             )}
             <DialogContent className="sm:max-w-[85vw] w-full h-[85vh] flex flex-col p-0 gap-0 overflow-hidden rounded-[40px] shadow-2xl border-none">
                 <DialogHeader className="p-6 border-b shrink-0">
                     <DialogTitle className="text-2xl font-black">
-                        {editingTask ? 'Talebi Düzenle' : 'Kişi Seçme Sayfası'}
+                        {editingTask ? 'Talebi Düzenle' : 'Destek Talebi Oluştur'}
                     </DialogTitle>
                     <DialogDescription>
                         {editingTask
-                            ? 'Mevcut kaynak talebini güncelleyin veya kişileri değiştirin.'
-                            : 'Projeniz için kaynak talebinde bulunun. Kişi seçebilir veya talebi doğrudan havuza bırakabilirsiniz.'}
+                            ? 'Mevcut destek talebini güncelleyin veya kişileri değiştirin.'
+                            : 'Destek talebinde bulunun. Kişi seçebilir veya talebi doğrudan havuza bırakabilirsiniz.'}
                     </DialogDescription>
                 </DialogHeader>
 
