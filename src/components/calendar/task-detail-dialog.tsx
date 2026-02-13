@@ -31,33 +31,7 @@ import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ResourceRequestModal } from './resource-request-modal'
 
-interface Task {
-    id: string
-    title: string
-    description?: string
-    start_date: string
-    end_date: string
-    status: string
-    priority: number
-    department: string
-    is_strategic: boolean
-    is_production: boolean
-    owner_id: string
-    owner?: {
-        full_name: string
-        avatar_url?: string
-    }
-    bookings?: {
-        id: string
-        worker_id: string
-        start_date: string
-        end_date: string
-        worker: {
-            full_name: string
-            avatar_url?: string
-        }
-    }[]
-}
+import { Task } from '@/types'
 
 interface TaskDetailDialogProps {
     task: Task | null
@@ -236,16 +210,17 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSuccess }: TaskDe
                             {task.bookings && task.bookings.length > 0 ? (
                                 task.bookings.map(booking => {
                                     const duration = differenceInDays(new Date(booking.end_date), new Date(booking.start_date)) + 1
+                                    const workerName = booking.worker?.full_name || 'Atanmamış'
                                     return (
                                         <div key={booking.id} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-2xl shadow-sm">
                                             <div className="flex items-center gap-3 min-w-0">
                                                 <Avatar className="h-8 w-8 ring-2 ring-white">
-                                                    <AvatarImage src={booking.worker.avatar_url || ''} />
+                                                    <AvatarImage src={booking.worker?.avatar_url || ''} />
                                                     <AvatarFallback className="bg-blue-600 text-white font-black text-[10px]">
-                                                        {booking.worker.full_name.charAt(0)}
+                                                        {workerName.charAt(0)}
                                                     </AvatarFallback>
                                                 </Avatar>
-                                                <span className="text-xs font-black text-slate-700 truncate">{booking.worker.full_name}</span>
+                                                <span className="text-xs font-black text-slate-700 truncate">{workerName}</span>
                                             </div>
                                             <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none font-black text-[10px] shrink-0">
                                                 {duration} GÜN
@@ -254,8 +229,9 @@ export function TaskDetailDialog({ task, open, onOpenChange, onSuccess }: TaskDe
                                     )
                                 })
                             ) : (
-                                <div className="col-span-full p-4 border-2 border-dashed border-slate-100 rounded-2xl text-center">
-                                    <p className="text-xs font-bold text-slate-300 uppercase tracking-widest">Henüz kimse atanmadı</p>
+                                <div className="col-span-full p-8 border-2 border-dashed border-slate-100 rounded-[28px] text-center bg-slate-50/30">
+                                    <UserCircle className="w-8 h-8 text-slate-200 mx-auto mb-2" />
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Henüz personel atanmadı</p>
                                 </div>
                             )}
                         </div>

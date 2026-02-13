@@ -25,9 +25,7 @@ import {
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { useI18nStore } from '@/stores/i18n-store'
-import type { Tables } from '@/types/supabase'
-
-type Task = Tables<'tasks'>
+import { Task } from '@/types'
 
 interface TaskPoolProps {
     mode?: 'general' | 'owner' | 'gm' | 'pending_approval' | 'worker'
@@ -52,11 +50,14 @@ export function TaskPool({ mode = 'general' }: TaskPoolProps) {
                 .from('tasks')
                 .select(`
                     *,
-                    assigned_worker:users!assigned_worker_id(*),
+                    owner:users!owner_id(full_name, avatar_url, department),
+                    assigned_worker:users!assigned_worker_id(full_name, avatar_url, department),
                     bookings(
                         id,
                         worker_id,
-                        worker:users!worker_id(full_name, avatar_url)
+                        start_date,
+                        end_date,
+                        worker:users!worker_id(full_name, avatar_url, department)
                     ),
                     task_volunteers (
                         id,
@@ -107,7 +108,7 @@ export function TaskPool({ mode = 'general' }: TaskPoolProps) {
             const { data, error } = await query
 
             if (error) throw error
-            setTasks(data || [])
+            setTasks((data || []) as unknown as Task[])
         } catch (error: any) {
             toast.error(t('tasks.loadError') + ' ' + error.message)
         } finally {

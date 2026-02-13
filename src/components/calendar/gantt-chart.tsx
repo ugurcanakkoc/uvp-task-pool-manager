@@ -38,38 +38,8 @@ import {
     DialogDescription,
 } from "@/components/ui/dialog"
 
-interface Task {
-    id: string
-    title: string
-    description?: string
-    start_date: string
-    end_date: string
-    status: string
-    priority: number
-    department: string
-    is_strategic: boolean
-    is_production: boolean
-    assigned_worker_id?: string
-    assigned_worker?: {
-        full_name: string
-        avatar_url?: string
-    }
-    owner_id: string
-    owner?: {
-        full_name: string
-        avatar_url?: string
-    }
-    bookings?: {
-        id: string
-        worker_id: string
-        start_date: string
-        end_date: string
-        worker: {
-            full_name: string
-            avatar_url?: string
-        }
-    }[]
-}
+import { getTasksWithDetails } from '@/lib/supabase/queries'
+import { Task } from '@/types'
 
 interface GanttChartProps {
     refreshTrigger?: number
@@ -117,26 +87,14 @@ export function GanttChart({ refreshTrigger = 0 }: GanttChartProps) {
 
     const fetchTasks = async () => {
         setIsLoading(true)
-        const { data, error } = await supabase
-            .from('tasks')
-            .select(`
-                *,
-                assigned_worker:users!assigned_worker_id(full_name, avatar_url),
-                owner:users!owner_id(full_name, avatar_url),
-                bookings(
-                    id,
-                    worker_id,
-                    start_date,
-                    end_date,
-                    worker:users!worker_id(full_name, avatar_url)
-                )
-            `)
-            .order('start_date', { ascending: true })
-
-        if (!error && data) {
-            setTasks(data as any)
+        try {
+            const data = await getTasksWithDetails()
+            setTasks(data)
+        } catch (error) {
+            console.error('Error fetching tasks:', error)
+        } finally {
+            setIsLoading(false)
         }
-        setIsLoading(false)
     }
 
     useEffect(() => {

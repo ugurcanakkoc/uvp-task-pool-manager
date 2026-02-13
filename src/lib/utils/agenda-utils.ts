@@ -10,6 +10,13 @@ export interface RecurringSlot {
 /**
  * Checks if a specific date matches a recurring slot's criteria.
  */
+/**
+ * Checks if a specific date matches a recurring or static slot's criteria.
+ * 
+ * @param date The date to check against the slot.
+ * @param slot The slot object (can be a personal task or booking).
+ * @returns True if the date falls within the slot's timing.
+ */
 export function isDateInSlot(date: Date, slot: RecurringSlot): boolean {
     const checkDate = startOfDay(date)
     const dayOfWeek = checkDate.getDay() === 0 ? 7 : checkDate.getDay() // 1=Mon, 7=Sun
@@ -32,6 +39,14 @@ export function isDateInSlot(date: Date, slot: RecurringSlot): boolean {
 
 /**
  * Calculates total occupancy for a user on a specific date.
+ */
+/**
+ * Calculates total occupancy for a user on a specific date based on project tasks and personal events.
+ * 
+ * @param date The date to calculate occupancy for.
+ * @param tasks Array of tasks assigned to the user.
+ * @param personalTasks Array of personal events/tasks for the user.
+ * @returns Object containing the total occupancy percentage (capped at 100) and the primary reason.
  */
 export function getUserOccupancyForDate(
     date: Date,
